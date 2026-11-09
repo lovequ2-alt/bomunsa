@@ -47,6 +47,9 @@ class Bomunsa3D {
     this.pagodaTotalAngle = 0;
     this.pagodaRadius = 6.2;
     this.pagodaIsRunning = false;
+    this.isPagodaBowing = false;
+    this.pagodaBowElapsed = 0;
+    this.pagodaBowDuration = 2.4;
     this.footprints = [];
     this.lastFootprintDist = 0;
     this.footprintStepSide = 1;
@@ -2075,30 +2078,58 @@ class Bomunsa3D {
 
   startPagodaSpin() {
     this.currentMode = 'pagoda_spin';
-    this.pagodaAngle = Math.PI / 2; // 남쪽 (z + 6.2) 황금 연꽃 표식에서 정식 출발
+    this.pagodaAngle = Math.PI / 2; // 남쪽 (z + 6.2) 황금 연꽃 표식
     this.pagodaTotalAngle = 0;
     this.pagodaRoundsCompleted = 0;
-    this.pagodaIsRunning = true;
     this.clearFootprints();
+
+    // [요청 반영: 1단계 - 탑돌이 시작 전 탑을 향해 정성껏 합장 반배 올리기]
+    this.isPagodaBowing = true;
+    this.pagodaBowElapsed = 0;
+    this.pagodaIsRunning = false;
+
+    // 남쪽 출발 표식에 캐릭터 위치 및 탑(북쪽)을 마주보도록 정렬
+    const px = this.pagodaPos.x;
+    const pz = this.pagodaPos.z + this.pagodaRadius;
+    this.playerPos.set(px, 0, pz);
+    this.characterGroup.position.copy(this.playerPos);
+    this.characterGroup.rotation.y = Math.PI; // 묘보탑(북쪽)을 정면으로 경건하게 마주봄
+
+    // 사지 초기 정자세 복원
+    if (this.charLimbs) {
+      this.charLimbs.leftLeg.rotation.x = 0;
+      this.charLimbs.rightLeg.rotation.x = 0;
+      this.charLimbs.body.position.y = 0.85;
+      this.charLimbs.head.position.y = 1.38;
+      this.charLimbs.gassho.position.set(0, 0.85, 0.22);
+      this.charLimbs.body.rotation.set(0, 0, 0);
+      this.charLimbs.head.rotation.set(0, 0, 0);
+      this.charLimbs.gassho.rotation.set(0, 0, 0);
+    }
+
     if (window.templeAudio) window.templeAudio.playSingleMoktak();
     if (window.onPagodaRoundUpdate) {
-      window.onPagodaRoundUpdate(1, 3, '남쪽 황금 연꽃 표식에서 출발하여 시계 방향으로 3바퀴 탑돌이를 시작합니다.');
+      window.onPagodaRoundUpdate(0, 3, '묘보탑을 향해 정성껏 합장 반배를 올리고 탑돌이를 시작합니다. 🙏', false, true);
     }
   }
 
   togglePagodaSpin() {
-    if (this.currentMode !== 'pagoda_spin') {
+    if (this.currentMode !== 'pagoda_spin' || this.pagodaRoundsCompleted >= 3) {
       this.startPagodaSpin();
       return true;
     }
-    if (this.pagodaRoundsCompleted >= 3) {
-      this.startPagodaSpin();
+    if (this.isPagodaBowing) {
       return true;
     }
     this.pagodaIsRunning = !this.pagodaIsRunning;
-    if (!this.pagodaIsRunning) {
+    if (!this.pagodaIsRunning && this.charLimbs) {
       this.charLimbs.leftLeg.rotation.x = 0;
       this.charLimbs.rightLeg.rotation.x = 0;
+      this.charLimbs.body.position.y = 0.85;
+      this.charLimbs.head.position.y = 1.38;
+      this.charLimbs.body.rotation.set(0, 0, 0);
+      this.charLimbs.head.rotation.set(0, 0, 0);
+      this.charLimbs.gassho.rotation.set(0, 0, 0);
     }
     return this.pagodaIsRunning;
   }
@@ -2164,6 +2195,8 @@ class Bomunsa3D {
   exitBuilding() {
     this.currentMode = 'outside';
     this.pagodaIsRunning = false;
+    this.isPagodaBowing = false;
+    this.pagodaBowElapsed = 0;
     this.cameraDistance = 7.5;
     this.cameraAngles = { theta: 0, phi: 0.42 };
 
@@ -2267,7 +2300,51 @@ class Bomunsa3D {
     }
 
     else if (this.currentMode === 'pagoda_spin') {
-      if (this.pagodaIsRunning) {
+      if (this.isPagodaBowing) {
+        this.pagodaBowElapsed += delta;
+        const bowT = Math.min(1.0, this.pagodaBowElapsed / this.pagodaBowDuration);
+
+        // [요청 반영: 탑돌이 시작 전 경건한 합장 반배 이징 (0 -> 1 -> 0)]
+        let ease = 0;
+        if (bowT < 0.42) {
+          const t = bowT / 0.42;
+          ease = t * t * (3 - 2 * t);
+        } else if (bowT < 0.62) {
+          ease = 1.0;
+        } else {
+          const t = (bowT - 0.62) / 0.38;
+          ease = 1 - t * t * (3 - 2 * t);
+        }
+
+        const bowAngle = ease * 0.52; // 약 30도 정중한 반배
+        this.charLimbs.body.rotation.x = bowAngle;
+        this.charLimbs.head.rotation.x = ease * 0.38;
+        this.charLimbs.gassho.rotation.x = bowAngle;
+        this.charLimbs.gassho.position.y = 0.85 - ease * 0.08;
+
+        // 카메라: 남쪽 황금 연꽃 디딤돌에서 탑을 향해 반배하는 캐릭터가 온전히 다 보이도록 정면 구도
+        const px = this.pagodaPos.x;
+        const pz = this.pagodaPos.z + this.pagodaRadius;
+        const camPos = new THREE.Vector3(px, 2.0, pz + 4.6);
+        this.camera.position.lerp(camPos, 0.08);
+        this.camera.lookAt(new THREE.Vector3(px, 1.15, pz - 1.2));
+
+        if (bowT >= 1.0) {
+          // 반배 완료! 이제 시계 방향(우요삼잡) 탑돌이 걷기 본격 시작
+          this.isPagodaBowing = false;
+          this.charLimbs.body.rotation.x = 0;
+          this.charLimbs.head.rotation.x = 0;
+          this.charLimbs.gassho.rotation.x = 0;
+          this.charLimbs.gassho.position.set(0, 0.85, 0.22);
+
+          this.pagodaIsRunning = true;
+          if (window.templeAudio) window.templeAudio.playSingleMoktak();
+          if (window.onPagodaRoundUpdate) {
+            window.onPagodaRoundUpdate(1, 3, '첫 번째 바퀴: 지난 모든 번뇌와 허물을 비워냅니다. 🙏', false, false);
+          }
+        }
+      }
+      else if (this.pagodaIsRunning) {
         const angularSpeed = 0.16;
         const deltaAngle = angularSpeed * delta;
         this.pagodaAngle += deltaAngle;
@@ -2278,15 +2355,27 @@ class Bomunsa3D {
         this.playerPos.set(px, 0, pz);
         this.characterGroup.position.copy(this.playerPos);
 
-        const moveAngle = this.pagodaAngle + Math.PI / 2;
-        this.characterGroup.rotation.y = -moveAngle + Math.PI / 2;
+        // 시계 방향(우요삼잡) 보행 방향 각도
+        this.characterGroup.rotation.y = -this.pagodaAngle;
 
-        this.walkAnimTime += delta * 5.5;
-        this.charLimbs.leftLeg.rotation.x = Math.sin(this.walkAnimTime) * 0.38;
-        this.charLimbs.rightLeg.rotation.x = -Math.sin(this.walkAnimTime) * 0.38;
+        // [요청 반영: 걷는 모습 연출 - 양다리 교차 스윙 + 몸체 바운스 + 어깨 율동]
+        this.walkAnimTime += delta * 5.6;
+        const legSwing = Math.sin(this.walkAnimTime) * 0.44;
+        this.charLimbs.leftLeg.rotation.x = legSwing;
+        this.charLimbs.rightLeg.rotation.x = -legSwing;
 
+        const walkBob = Math.abs(Math.sin(this.walkAnimTime)) * 0.04;
+        this.charLimbs.body.position.y = 0.85 + walkBob;
+        this.charLimbs.head.position.y = 1.38 + walkBob;
+        this.charLimbs.gassho.position.y = 0.85 + walkBob;
+
+        const torsoTwist = Math.sin(this.walkAnimTime) * 0.05;
+        this.charLimbs.body.rotation.y = torsoTwist;
+        this.charLimbs.gassho.rotation.y = torsoTwist;
+
+        // 발자국 이펙트 및 보행 발소리
         this.lastFootprintDist += angularSpeed * this.pagodaRadius * delta;
-        if (this.lastFootprintDist > 1.2) {
+        if (this.lastFootprintDist > 1.15) {
           this.lastFootprintDist = 0;
           this.footprintStepSide *= -1;
           this.addFootprint(px, pz, this.characterGroup.rotation.y, this.footprintStepSide > 0);
@@ -2310,6 +2399,15 @@ class Bomunsa3D {
             this.pagodaIsRunning = false;
             this.charLimbs.leftLeg.rotation.x = 0;
             this.charLimbs.rightLeg.rotation.x = 0;
+            this.charLimbs.body.position.y = 0.85;
+            this.charLimbs.head.position.y = 1.38;
+            this.charLimbs.gassho.position.set(0, 0.85, 0.22);
+            this.charLimbs.body.rotation.set(0, 0, 0);
+            this.charLimbs.head.rotation.set(0, 0, 0);
+            this.charLimbs.gassho.rotation.set(0, 0, 0);
+
+            // 제자리 도착 후 탑을 정면으로 마주봄
+            this.characterGroup.rotation.y = Math.PI;
 
             if (window.templeAudio) window.templeAudio.playSingingBowl(216, 9.0);
             if (window.onPagodaRoundUpdate) {
@@ -2318,10 +2416,22 @@ class Bomunsa3D {
           }
         }
 
-        const cx = px + Math.cos(this.pagodaAngle - 0.45) * 5.2;
-        const cz = pz + Math.sin(this.pagodaAngle - 0.45) * 5.2;
-        this.camera.position.lerp(new THREE.Vector3(cx, 3.2, cz), 0.06);
-        this.camera.lookAt(this.pagodaPos.x, 3.2, this.pagodaPos.z);
+        // [요청 반영: 캐릭터 시야 100% 확보 - 3인칭 숄더 팔로우 카메라 앵글]
+        // 높이를 낮추고(2.1m) 캐릭터를 화면 중앙-하단에 안정적으로 안착
+        const camDistBehind = 3.6;
+        const camDistOutward = 2.4;
+        const cx = px + Math.sin(this.pagodaAngle) * camDistBehind + Math.cos(this.pagodaAngle) * camDistOutward;
+        const cz = pz - Math.cos(this.pagodaAngle) * camDistBehind + Math.sin(this.pagodaAngle) * camDistOutward;
+        const cy = 2.1;
+
+        this.camera.position.lerp(new THREE.Vector3(cx, cy, cz), 0.08);
+
+        // 시선: 캐릭터 상체와 보행 전방, 그리고 우측 석탑을 황금비로 조망
+        const targetX = px - Math.sin(this.pagodaAngle) * 1.0 - Math.cos(this.pagodaAngle) * 0.9;
+        const targetZ = pz + Math.cos(this.pagodaAngle) * 1.0 - Math.sin(this.pagodaAngle) * 0.9;
+        const targetY = 1.15;
+
+        this.camera.lookAt(new THREE.Vector3(targetX, targetY, targetZ));
       }
     }
 

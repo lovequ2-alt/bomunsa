@@ -119,9 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 3. 탑돌이 라운드 카운터 업데이트
-  window.onPagodaRoundUpdate = (round, maxRound, message, isFinished = false) => {
+  window.onPagodaRoundUpdate = (round, maxRound, message, isFinished = false, isBowing = false) => {
     pagodaCounterCard.classList.add('visible');
-    if (isFinished) {
+    if (isBowing) {
+      pagodaRoundDisplay.textContent = `합장 반배(半拜) 올리기 🙏`;
+      pagodaRoundDisplay.style.color = '#ffd766';
+      pagodaRoundDesc.textContent = message;
+      bowBtn.classList.add('active');
+      bowText.textContent = '합장 반배 중... 🙏';
+    } else if (isFinished) {
       pagodaRoundDisplay.textContent = `3 / 3 바퀴 (원만 회향 멈춤 🙏)`;
       pagodaRoundDisplay.style.color = '#ffd766';
       pagodaRoundDesc.textContent = message;
@@ -164,10 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
       candleBtn.style.display = 'none';
       incenseBtn.style.display = 'none';
 
-      // [요청 반영] 묘보탑 이동 시 하단 메뉴 중 3배 대신 '탑돌이' 표출
+      // [요청 반영] 묘보탑 이동 시 3배 대신 '탑돌이' 표출 (시작 시 합장 반배 진행)
       bowBtn.style.gridColumn = '1 / -1';
       bowBtn.classList.add('active');
-      bowText.textContent = '탑돌이 멈추기';
+      bowText.textContent = '합장 반배 중... 🙏';
 
       instrumentText.textContent = '🪵 목탁 울리기';
       instrumentBtn.onclick = () => {
@@ -270,7 +276,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // [요청 반영: 묘보탑 이동 시 3배 대신 탑돌이 수행]
     if (app.activeLocation && app.activeLocation.id === 'pagoda') {
       const isRunning = app.togglePagodaSpin();
-      if (isRunning) {
+      if (app.isPagodaBowing) {
+        bowBtn.classList.add('active');
+        bowText.textContent = '합장 반배 중... 🙏';
+      } else if (isRunning) {
         bowBtn.classList.add('active');
         bowText.textContent = '탑돌이 멈추기';
       } else {
