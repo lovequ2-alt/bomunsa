@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+  <title>보문사 (普門寺) — 산사 명상 3D 도량</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Three.js (r128) - 로컬 파일 및 CDN 이중 안전 로드 -->
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <!-- 3D 캔버스 컨테이너 -->
+  <div id="canvas-container"></div>
+
+  <!-- 상단 헤더 -->
+  <header>
+    <div class="title-area">
+      <h1>보문사 <span>普門寺 · 쉼과 명상</span></h1>
+    </div>
+    <div class="header-actions">
+      <button id="mute-btn" class="icon-btn" title="소리 켜기/끄기">🔔</button>
+      <button id="fullscreen-btn" class="icon-btn" title="전체화면">⛶</button>
+    </div>
+  </header>
+
+  <!-- 조작 힌트 배지 -->
+  <div id="control-hint" class="control-hint">
+    바닥을 탭(터치)하면 걸어갑니다 · 화면을 밀면 둘러봅니다
+  </div>
+
+  <!-- 전각 근접 팝업 카드 -->
+  <div id="location-card" class="location-card">
+    <div id="location-tag" class="location-card-tag">경내 안내</div>
+    <h2 id="location-title">대웅전</h2>
+    <p id="location-desc">대웅전에 대한 설명이 표시됩니다.</p>
+    <button id="enter-btn" class="enter-btn">
+      <span>🚪</span> 전각 안으로 입장하기
+    </button>
+  </div>
+
+  <!-- 전각 내부 명상 모드 오버레이 -->
+  <div id="meditation-overlay" class="meditation-overlay">
+    <div class="meditation-header">
+      <div id="temple-header-group">
+        <h2 id="meditation-title">보문사 석굴암</h2>
+        <p id="meditation-sub" style="display: none;"></p>
+      </div>
+
+      <!-- [요청 반영] 탑돌이 발원 카드 (중복 문구 제거, 1번만 깔끔하게 표출) -->
+      <div id="pagoda-counter-card" class="pagoda-counter-card">
+        <div class="pagoda-round-title">묘보탑 3바퀴 탑돌이 발원</div>
+        <div id="pagoda-round-display" class="pagoda-round-display">1 / 3 바퀴 진행 중</div>
+        <div id="pagoda-round-desc" class="pagoda-round-desc">황금 연꽃 표식에서 출발하여 몸과 마음의 번뇌를 비웁니다.</div>
+      </div>
+
+      <!-- 내가 올린 발원문 표시 배지 -->
+      <div id="active-prayer-badge" class="active-prayer-badge"></div>
+    </div>
+
+    <!-- [호흡 가이드 원: 부처님 주변을 감싸고, 안내 문구는 부처님과 촛대 사이에 표시] -->
+    <div id="breath-circle-container" class="breath-circle-container" style="display: none;">
+      <div id="breath-circle" class="breath-circle active"></div>
+      <div id="breath-text-card" class="breath-text-card">
+        <span id="breath-text" class="breath-text">숨을 들이마십니다...</span>
+      </div>
+    </div>
+
+    <!-- [삼배 안내 카드] 부처님과 촛불 사이에 위치 -->
+    <div id="bow-status-card" class="bow-status-card" style="display: none;">
+      <span id="bow-status-text">첫 번째 절: 지난 모든 허물과 번뇌를 비워냅니다. (1/3)</span>
+    </div>
+
+    <!-- [사용자 요청 반영: 메뉴 밖의 박스 없이 메뉴 버튼만 심플하게 배치, 아이콘 없이 글씨만 표출] -->
+    <div class="meditation-menu-box">
+      <div class="action-grid">
+        <button id="bow-btn" class="control-grid-btn bow-highlight">
+          <span id="bow-text">삼배 올리기</span>
+        </button>
+        <button id="start-meditation-btn" class="control-grid-btn highlight">
+          <span id="meditation-btn-text">호흡 명상</span>
+        </button>
+        <button id="candle-btn" class="control-grid-btn">
+          <span id="candle-text">초 켜기</span>
+        </button>
+        <button id="incense-btn" class="control-grid-btn">
+          <span id="incense-text">향 피우기</span>
+        </button>
+      </div>
+
+      <div class="menu-bottom-row">
+        <button id="instrument-btn" class="control-grid-btn">
+          <span id="instrument-text">싱잉볼 치기</span>
+        </button>
+        <button id="open-prayer-btn" class="control-grid-btn prayer-wide-btn">
+          <span>마음 발원문</span>
+        </button>
+        <button id="exit-btn" class="exit-btn">
+          마당으로
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 발원문 작성 팝업 모달 -->
+  <div id="prayer-modal-overlay" class="prayer-modal-overlay">
+    <div class="prayer-modal">
+      <h3 id="prayer-modal-title">보문사 발원문(發願文)</h3>
+      <p>도량에 머무는 지금, 간절한 소원이나 내려놓고 싶은 마음을 진솔하게 적어보세요.</p>
+      <textarea id="prayer-input" class="prayer-textarea" placeholder="예: 가족의 건강과 평온을 발원하며, 마음에 깃든 불안을 모두 비워냅니다..."></textarea>
+      <div class="prayer-modal-actions">
+        <button id="prayer-submit-btn" class="prayer-submit-btn">🙏 정성으로 발원 올리기</button>
+        <button id="prayer-cancel-btn" class="prayer-cancel-btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 랜드마크 내비게이션 바 -->
+  <nav id="bottom-nav" class="bottom-nav-container">
+    <button class="nav-pill" data-id="hojimun">🚪 호지문(입구)</button>
+    <button class="nav-pill" data-id="pagoda">🗼 묘보탑(9층탑)</button>
+    <button class="nav-pill" data-id="daewoong">🏛️ 대웅전</button>
+    <button class="nav-pill" data-id="sansin">🌲 산신각</button>
+    <button class="nav-pill" data-id="seokguram">🪨 석굴암</button>
+  </nav>
+
+  <!-- 스크립트 연결 -->
+  <script src="audio.js"></script>
+  <script src="daewoong_asset.js"></script>
+  <script src="sansin_asset.js"></script>
+  <script src="seokguram_asset.js"></script>
+  <script src="temple3d.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
