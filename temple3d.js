@@ -42,7 +42,7 @@ class Bomunsa3D {
 
     // 탑돌이
     this.pagodaPos = new THREE.Vector3(-23, 0, -11);
-    this.pagodaAngle = 0;
+    this.pagodaAngle = Math.PI / 2;
     this.pagodaRoundsCompleted = 0;
     this.pagodaTotalAngle = 0;
     this.pagodaRadius = 6.2;
@@ -537,15 +537,17 @@ class Bomunsa3D {
     lotusEmblem.position.y = 0.11;
     markerGroup.add(lotusEmblem);
 
-    markerGroup.position.set(x + 6.2, 0, z);
+    // [요청 반영: 호지문 및 타 전각과 동일하게 남쪽(z + 6.2)에서 북쪽 석탑을 바라보도록 정면 배치]
+    // 석굴암(x: -18, z: -13.2)과 10m 가까이 충분히 이격되어 근접 팝업 간섭 완전 해소
+    markerGroup.position.set(x, 0, z + 6.2);
     this.scene.add(markerGroup);
     this.startMarkerMesh = markerGroup;
 
     this.registerInteractable({
       id: 'pagoda',
       name: '묘보탑 (팔각구층석탑)',
-      desc: '월정사 양식을 계승한 장엄한 8각9층 석탑입니다. 황금 연꽃 디딤돌에서 출발하여 시계 방향으로 3바퀴를 돌며 마음의 짐을 비워냅니다.',
-      position: new THREE.Vector3(x + 6.2, 0, z),
+      desc: '월정사 양식을 계승한 장엄한 8각9층 석탑입니다. 남쪽 황금 연꽃 표식에서 출발하여 시계 방향으로 3바퀴를 돌며 마음의 번뇌를 비워냅니다.',
+      position: new THREE.Vector3(x, 0, z + 6.2),
       lookTarget: new THREE.Vector3(x, 2.5, z),
       enterable: true,
       enterType: 'pagoda'
@@ -2062,20 +2064,41 @@ class Bomunsa3D {
     }
   }
 
+  startPagodaSpin() {
+    this.currentMode = 'pagoda_spin';
+    this.pagodaAngle = Math.PI / 2; // 남쪽 (z + 6.2) 황금 연꽃 표식에서 정식 출발
+    this.pagodaTotalAngle = 0;
+    this.pagodaRoundsCompleted = 0;
+    this.pagodaIsRunning = true;
+    this.clearFootprints();
+    if (window.templeAudio) window.templeAudio.playSingleMoktak();
+    if (window.onPagodaRoundUpdate) {
+      window.onPagodaRoundUpdate(1, 3, '남쪽 황금 연꽃 표식에서 출발하여 시계 방향으로 3바퀴 탑돌이를 시작합니다.');
+    }
+  }
+
+  togglePagodaSpin() {
+    if (this.currentMode !== 'pagoda_spin') {
+      this.startPagodaSpin();
+      return true;
+    }
+    if (this.pagodaRoundsCompleted >= 3) {
+      this.startPagodaSpin();
+      return true;
+    }
+    this.pagodaIsRunning = !this.pagodaIsRunning;
+    if (!this.pagodaIsRunning) {
+      this.charLimbs.leftLeg.rotation.x = 0;
+      this.charLimbs.rightLeg.rotation.x = 0;
+    }
+    return this.pagodaIsRunning;
+  }
+
   enterCurrentBuilding() {
     if (!this.activeLocation || !this.activeLocation.enterable) return;
 
     if (this.activeLocation.enterType === 'pagoda') {
-      this.currentMode = 'pagoda_spin';
-      this.pagodaAngle = 0;
-      this.pagodaTotalAngle = 0;
-      this.pagodaRoundsCompleted = 0;
-      this.pagodaIsRunning = true;
-      this.clearFootprints();
-      if (window.templeAudio) window.templeAudio.playSingleMoktak();
-      if (window.onPagodaRoundUpdate) {
-        window.onPagodaRoundUpdate(1, 3, '황금 연꽃 표식에서 출발하여 몸과 마음의 번뇌를 비웁니다.');
-      }
+      this.startPagodaSpin();
     } else {
       this.setupDarkTempleInterior();
 
@@ -2148,6 +2171,13 @@ class Bomunsa3D {
     this.isIncenseLit = false;
     if (this.candleFlames) this.candleFlames.forEach(f => f.visible = false);
     if (this.incenseSmokes) this.incenseSmokes.forEach(s => s.visible = false);
+
+    if (this.charLimbs) {
+      this.charLimbs.leftLeg.rotation.x = 0;
+      this.charLimbs.rightLeg.rotation.x = 0;
+      this.charLimbs.leftArm.rotation.x = 0;
+      this.charLimbs.rightArm.rotation.x = 0;
+    }
 
     if (window.templeAudio) {
       window.templeAudio.stopMoktakLoop();

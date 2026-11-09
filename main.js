@@ -125,10 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
       pagodaRoundDisplay.textContent = `3 / 3 바퀴 (원만 회향 멈춤 🙏)`;
       pagodaRoundDisplay.style.color = '#ffd766';
       pagodaRoundDesc.textContent = message;
+      // 3바퀴 완료 시 버튼을 '탑돌이 다시 시작'으로 전환
+      bowBtn.classList.remove('active');
+      bowText.textContent = '탑돌이 다시 시작';
     } else {
       pagodaRoundDisplay.textContent = `${round} / ${maxRound} 바퀴 진행 중`;
       pagodaRoundDisplay.style.color = '#ffffff';
       pagodaRoundDesc.textContent = message;
+      bowBtn.classList.add('active');
+      bowText.textContent = '탑돌이 멈추기';
     }
   };
 
@@ -155,8 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
       templeHeaderGroup.style.display = 'none';
       pagodaCounterCard.classList.add('visible');
       breathContainer.style.display = 'none';
+      startMeditationBtn.style.display = 'none';
       candleBtn.style.display = 'none';
       incenseBtn.style.display = 'none';
+
+      // [요청 반영] 묘보탑 이동 시 하단 메뉴 중 3배 대신 '탑돌이' 표출
+      bowBtn.style.gridColumn = '1 / -1';
+      bowBtn.classList.add('active');
+      bowText.textContent = '탑돌이 멈추기';
 
       instrumentText.textContent = '🪵 목탁 울리기';
       instrumentBtn.onclick = () => {
@@ -175,8 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
       templeHeaderGroup.style.display = 'block';
       pagodaCounterCard.classList.remove('visible');
       breathContainer.style.display = 'flex';
+      startMeditationBtn.style.display = 'flex';
       candleBtn.style.display = 'flex';
       incenseBtn.style.display = 'flex';
+      bowBtn.style.gridColumn = '';
+      bowBtn.classList.remove('active');
+      bowText.textContent = '삼배 올리기';
 
       // [요청 반영] 불상과 제단 시야 확보: 호흡 가이드 원은 평소 숨김 처리
       isMeditationActive = false;
@@ -252,6 +267,19 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   bowBtn.addEventListener('click', () => {
+    // [요청 반영: 묘보탑 이동 시 3배 대신 탑돌이 수행]
+    if (app.activeLocation && app.activeLocation.id === 'pagoda') {
+      const isRunning = app.togglePagodaSpin();
+      if (isRunning) {
+        bowBtn.classList.add('active');
+        bowText.textContent = '탑돌이 멈추기';
+      } else {
+        bowBtn.classList.remove('active');
+        bowText.textContent = '탑돌이 재개';
+      }
+      return;
+    }
+
     if (app.isBowing) return;
     bowBtn.classList.add('active');
     bowText.textContent = '삼배 올리는 중...';
@@ -305,7 +333,12 @@ document.addEventListener('DOMContentLoaded', () => {
     activePrayerBadge.classList.remove('visible');
     bowStatusCard.style.display = 'none';
     bowBtn.classList.remove('active');
+    bowBtn.style.gridColumn = '';
     bowText.textContent = '삼배 올리기';
+
+    startMeditationBtn.style.display = 'flex';
+    candleBtn.style.display = 'flex';
+    incenseBtn.style.display = 'flex';
 
     isMeditationActive = false;
     startMeditationBtn.classList.remove('active');

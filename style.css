@@ -113,6 +113,19 @@ header * {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+/* [요청 반영: 상단 보문사와 전각 이름 겹침 완전 해결] */
+/* 전각/명상 모드 입장 시 상단 메인 '보문사' 타이틀 영역을 완전히 숨겨 전각 이름(보문사 대웅전/석굴암/산신각)만 단독 표출 */
+body.in-meditation header {
+  justify-content: flex-end !important;
+  background: transparent !important;
+}
+
+body.in-meditation header .title-area {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* 명상 모드 시 하단 메뉴 및 힌트 완전 숨김 처리 */
 body.in-meditation .bottom-nav-container,
 body.in-meditation .control-hint {
