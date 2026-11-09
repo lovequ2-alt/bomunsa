@@ -41,7 +41,7 @@ class Bomunsa3D {
     this.currentCharRotation = Math.PI;
 
     // 탑돌이
-    this.pagodaPos = new THREE.Vector3(-23, 0, -11);
+    this.pagodaPos = new THREE.Vector3(-16, 0, 3);
     this.pagodaAngle = Math.PI / 2;
     this.pagodaRoundsCompleted = 0;
     this.pagodaTotalAngle = 0;
@@ -264,13 +264,21 @@ class Bomunsa3D {
     pathway.receiveShadow = true;
     this.scene.add(pathway);
 
-    // [좌측 석굴암 및 묘보탑 연결 길]
+    // [좌측 석굴암 연결 길]
     const leftPathGeo = new THREE.PlaneGeometry(24, 4);
     const leftPath = new THREE.Mesh(leftPathGeo, pathwayMat);
     leftPath.rotation.x = -Math.PI / 2;
     leftPath.position.set(-11, 0.02, -11);
     leftPath.receiveShadow = true;
     this.scene.add(leftPath);
+
+    // [좌측 앞쪽 너른 공터 묘보탑 진입로]
+    const pagodaPathGeo = new THREE.PlaneGeometry(13, 4);
+    const pagodaPath = new THREE.Mesh(pagodaPathGeo, pathwayMat);
+    pagodaPath.rotation.x = -Math.PI / 2;
+    pagodaPath.position.set(-9.5, 0.02, 3);
+    pagodaPath.receiveShadow = true;
+    this.scene.add(pagodaPath);
 
     // [우측 산신각 연결 길]
     const rightPathGeo = new THREE.PlaneGeometry(20, 4);
@@ -282,9 +290,9 @@ class Bomunsa3D {
 
     this.createMountainRock();
 
-    // [요청 반영: 호지문 단차 제거, 탑은 석굴암 왼쪽 아래(-23, -11), 산신각은 평지(y=0)]
+    // [요청 반영: 묘보탑을 석굴암에서 앞쪽 너른 공터(-16, 0, 3)로 이동하여 석굴암 팝업 간섭 및 나무 가림 완전 해소]
     this.createHojimun(0, 0, 26);
-    this.createPagoda(-23, 0, -11);
+    this.createPagoda(-16, 0, 3);
     this.createDaewoongjeon(0, 0, -16);
     this.createSansingak(20, 0, -18);
     this.createSeokguram(-18, 0, -22);
@@ -1756,9 +1764,10 @@ class Bomunsa3D {
   }
 
   createEnvironmentDetails() {
+    // [요청 반영: 묘보탑 앞마당 공터 및 탑돌이 궤적 시야 확보를 위해 외곽 산자락으로 소나무 재배치]
     const pineTreeLocations = [
       [-12, 18], [12, 19], [-8, 30], [9, 32],
-      [-24, -4], [-22, 10], [22, -2], [25, 12],
+      [-29, -5], [-28, 14], [22, -2], [25, 12],
       [-10, -28], [8, -28], [28, -24], [-28, -22]
     ];
     pineTreeLocations.forEach(([px, pz]) => {
