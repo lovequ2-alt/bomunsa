@@ -4,6 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('canvas-container');
   const app = new Bomunsa3D(container);
 
+  // [사용자 요청 반영: 호지문 진입 전 정지화면 스플래시 (보문사 / 도심속 / 천년고찰 / 비구니사찰)]
+  const splashOverlay = document.getElementById('splash-overlay');
+  if (splashOverlay) {
+    const dismissSplash = () => {
+      splashOverlay.classList.add('hidden');
+    };
+    const splashTimer = setTimeout(dismissSplash, 2800);
+    splashOverlay.addEventListener('click', () => {
+      clearTimeout(splashTimer);
+      dismissSplash();
+    });
+  }
+
   // UI 캐싱
   const muteBtn = document.getElementById('mute-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
@@ -69,7 +82,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function refreshPrayerBadge(locationId) {
     const saved = localStorage.getItem(`bomunsa_prayer_${locationId}`);
     if (saved) {
-      activePrayerBadge.textContent = `🪷 나의 발원: "${saved}"`;
+      activePrayerBadge.innerHTML = '';
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'prayer-badge-title';
+      titleDiv.textContent = '🪷 나의 발원';
+      const textDiv = document.createElement('div');
+      textDiv.className = 'prayer-badge-text';
+      textDiv.textContent = saved;
+      activePrayerBadge.appendChild(titleDiv);
+      activePrayerBadge.appendChild(textDiv);
       activePrayerBadge.classList.add('visible');
     } else {
       activePrayerBadge.classList.remove('visible');

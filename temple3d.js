@@ -492,8 +492,8 @@ class Bomunsa3D {
     group.position.set(x, y, z);
     this.scene.add(group);
 
-    // [요청 반영: 건물 처마 단청보에 품격 있는 전통 현판 설치 - Z-fighting 번쩍거림 방지 오프셋 적용]
-    this.createSignboard(group, '호지문', '四天王門', 0, 4.52, 2.18, 2.5, 0.68);
+    // [사용자 요청 반영: 지붕 처마에 가리지 않도록 상단 기둥/인방 높이로 현판을 내리고 앞쪽으로 전진 배치]
+    this.createSignboard(group, '호지문', '四天王門', 0, 3.88, 1.68, 2.4, 0.66);
 
     this.registerInteractable({
       id: 'hojimun',
@@ -587,8 +587,8 @@ class Bomunsa3D {
     daewoong.position.set(x, y, z);
     this.scene.add(daewoong);
 
-    // [사용자 요청 반영: 전각 처마 단청면에 번쩍거림/Z-fighting 없는 품격 높은 3D 전통 현판 부착]
-    this.createSignboard(daewoong, '대웅전', '大雄殿', 0, 5.82, 4.72, 2.8, 0.76);
+    // [사용자 요청 반영: 지붕 처마에 가리지 않도록 문 위 벽면 상단 높이로 현판을 내림]
+    this.createSignboard(daewoong, '대웅전', '大雄殿', 0, 5.02, 4.42, 2.8, 0.72);
     this.createStoneLantern(x - 4.2, 0, z + 6.5);
     this.createStoneLantern(x + 4.2, 0, z + 6.5);
 
@@ -613,8 +613,8 @@ class Bomunsa3D {
     sansin.position.set(x, y, z);
     this.scene.add(sansin);
 
-    // [요청 반영: 건물 처마 단청면에 번쩍거림 없는 3D 전통 현판 부착]
-    this.createSignboard(sansin, '산신각', '山神閣', 0, 4.22, 2.72, 2.2, 0.62);
+    // [사용자 요청 반영: 지붕 처마에 가리지 않도록 문 위 상단 높이로 현판을 내림]
+    this.createSignboard(sansin, '산신각', '山神閣', 0, 3.65, 2.45, 2.2, 0.58);
 
     this.addObstacle(x, z, 3.8);
 
@@ -678,8 +678,8 @@ class Bomunsa3D {
     group.position.set(x, y, z);
     this.scene.add(group);
 
-    // [요청 반영: 석굴암 정면 처마에 번쩍거림 없는 3D 석조/목조 현판 부착]
-    this.createSignboard(group, '보문사 석굴암', '石窟法堂', 0, 4.60, 3.68, 2.9, 0.74);
+    // [사용자 요청 반영: 석조 지붕 처마에 가리지 않도록 석문 위 상단 높이로 현판을 내림]
+    this.createSignboard(group, '보문사 석굴암', '石窟法堂', 0, 4.16, 3.05, 2.8, 0.68);
 
     this.addObstacle(x, z, 5.0);
     this.addObstacle(x, z + 2.2, 3.6);

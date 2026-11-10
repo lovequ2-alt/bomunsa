@@ -21,6 +21,33 @@
   </script>
 </head>
 <body>
+  <!-- [사용자 요청 반영: 호지문 진입 전 정지화면 스플래시 (전각 일러스트 + 보문사 / 도심속 / 천년고찰 / 비구니사찰)] -->
+  <div id="splash-overlay" class="splash-overlay">
+    <div class="splash-content">
+      <div class="splash-temple-art">
+        <svg viewBox="0 0 180 130" class="splash-temple-svg" xmlns="http://www.w3.org/2000/svg">
+          <path d="M46 42 Q90 36 134 42" stroke="#d4af37" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M18 68 Q40 58 48 40 L132 40 Q140 58 162 68 Q128 73 90 73 Q52 73 18 68 Z" stroke="#d4af37" stroke-width="3" fill="rgba(212, 175, 55, 0.08)" stroke-linejoin="round"/>
+          <path d="M12 63 Q18 69 26 69" stroke="#d4af37" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M168 63 Q162 69 154 69" stroke="#d4af37" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="44" y="73" width="92" height="44" stroke="#d4af37" stroke-width="2.8" fill="rgba(20, 22, 26, 0.6)" rx="2"/>
+          <line x1="62" y1="73" x2="62" y2="117" stroke="#d4af37" stroke-width="2"/>
+          <line x1="118" y1="73" x2="118" y2="117" stroke="#d4af37" stroke-width="2"/>
+          <rect x="78" y="83" width="24" height="34" stroke="#d4af37" stroke-width="2" fill="rgba(212, 175, 55, 0.06)"/>
+          <line x1="90" y1="83" x2="90" y2="117" stroke="#d4af37" stroke-width="1.5"/>
+          <line x1="34" y1="119" x2="146" y2="119" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <img src="icon.png" class="splash-lotus-emblem" alt="보문사 로고">
+      </div>
+      <h1 class="splash-title">보문사</h1>
+      <div class="splash-lines">
+        <p>도심속</p>
+        <p>천년고찰</p>
+        <p>비구니사찰</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 3D 캔버스 컨테이너 -->
   <div id="canvas-container"></div>
 
