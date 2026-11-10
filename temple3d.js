@@ -136,34 +136,38 @@ class Bomunsa3D {
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.45 });
     const shoeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
 
-    // 1. 몸통 (부드러운 조약돌 곡선)
+    // [사용자 요청 반영: 허리(y=0.50) 축 기준으로 상체·머리·합장손이 통째로 깊게 숙여지는 반배 피벗 구축]
+    const upperBodyPivot = new THREE.Group();
+    upperBodyPivot.position.set(0, 0.50, 0);
+
+    // 1. 몸통 (부드러운 조약돌 곡선, 피벗 y=0.50 기준 +0.35 -> 0.85)
     const bodyGeo = new THREE.SphereGeometry(0.38, 20, 20);
     bodyGeo.scale(1.0, 1.25, 0.88);
     const body = new THREE.Mesh(bodyGeo, robeMat);
-    body.position.y = 0.85;
+    body.position.y = 0.35;
     body.castShadow = true;
-    this.characterGroup.add(body);
+    upperBodyPivot.add(body);
 
-    // 2. 머리
+    // 2. 머리 (피벗 y=0.50 기준 +0.88 -> 1.38)
     const headGeo = new THREE.SphereGeometry(0.25, 24, 24);
     const head = new THREE.Mesh(headGeo, skinMat);
-    head.position.y = 1.38;
+    head.position.y = 0.88;
     head.castShadow = true;
-    this.characterGroup.add(head);
+    upperBodyPivot.add(head);
 
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), skinMat);
-    nose.position.set(0, 1.37, 0.25);
-    this.characterGroup.add(nose);
+    nose.position.set(0, 0.87, 0.25);
+    upperBodyPivot.add(nose);
 
     [-0.24, 0.24].forEach(ex => {
       const ear = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), skinMat);
-      ear.position.set(ex, 1.38, 0);
-      this.characterGroup.add(ear);
+      ear.position.set(ex, 0.88, 0);
+      upperBodyPivot.add(ear);
     });
 
     // 3. [요청 반영] 손이 거꾸로 되지 않고 하늘/턱 쪽으로 단정히 위를 향하도록 바로 세운 하얀 합장 손
     const gasshoGroup = new THREE.Group();
-    gasshoGroup.position.set(0, 0.85, 0.22); // 가슴 앞 위치
+    gasshoGroup.position.set(0, 0.35, 0.22); // 가슴 앞 위치
 
     // 양팔: [요청 반영: 소매 부분을 아래로 자연스럽게 내려 단아하게 늘어뜨린 승복 배흘림 소매]
     [-0.14, 0.14].forEach((sx, idx) => {
@@ -207,7 +211,8 @@ class Bomunsa3D {
     handsPair.add(wrist);
 
     gasshoGroup.add(handsPair);
-    this.characterGroup.add(gasshoGroup);
+    upperBodyPivot.add(gasshoGroup);
+    this.characterGroup.add(upperBodyPivot);
 
     // 4. 양다리와 흰 고무신
     const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.42, 12);
@@ -238,6 +243,7 @@ class Bomunsa3D {
     this.charLimbs = {
       leftLeg: leftLegPivot,
       rightLeg: rightLegPivot,
+      upperBody: upperBodyPivot,
       body: body,
       head: head,
       gassho: gasshoGroup
@@ -2217,6 +2223,22 @@ class Bomunsa3D {
     }
   }
 
+  resetCharacterPose() {
+    if (!this.charLimbs) return;
+    this.charLimbs.leftLeg.rotation.set(0, 0, 0);
+    this.charLimbs.rightLeg.rotation.set(0, 0, 0);
+    if (this.charLimbs.upperBody) {
+      this.charLimbs.upperBody.position.set(0, 0.50, 0);
+      this.charLimbs.upperBody.rotation.set(0, 0, 0);
+    }
+    this.charLimbs.body.position.set(0, 0.35, 0);
+    this.charLimbs.body.rotation.set(0, 0, 0);
+    this.charLimbs.head.position.set(0, 0.88, 0);
+    this.charLimbs.head.rotation.set(0, 0, 0);
+    this.charLimbs.gassho.position.set(0, 0.35, 0.22);
+    this.charLimbs.gassho.rotation.set(0, 0, 0);
+  }
+
   // [사용자 요청 반영: 한 바퀴 돌 때마다 남쪽에서 멈춰 탑을 향해 반배, 다 돌고 나서 마무리 반배]
   triggerPagodaBow(roundTitle, roundDesc, nextStep, isFinal = false) {
     this.isPagodaBowing = true;
@@ -2232,17 +2254,7 @@ class Bomunsa3D {
     this.characterGroup.position.copy(this.playerPos);
     this.characterGroup.rotation.y = Math.PI; // 묘보탑(북쪽) 정면 마주봄
 
-    // 사지 초기 정자세 복원
-    if (this.charLimbs) {
-      this.charLimbs.leftLeg.rotation.x = 0;
-      this.charLimbs.rightLeg.rotation.x = 0;
-      this.charLimbs.body.position.y = 0.85;
-      this.charLimbs.head.position.y = 1.38;
-      this.charLimbs.gassho.position.set(0, 0.85, 0.22);
-      this.charLimbs.body.rotation.set(0, 0, 0);
-      this.charLimbs.head.rotation.set(0, 0, 0);
-      this.charLimbs.gassho.rotation.set(0, 0, 0);
-    }
+    this.resetCharacterPose();
 
     if (isFinal) {
       if (window.templeAudio) window.templeAudio.playSingingBowl(216, 9.0);
@@ -2276,14 +2288,8 @@ class Bomunsa3D {
       return true;
     }
     this.pagodaIsRunning = !this.pagodaIsRunning;
-    if (!this.pagodaIsRunning && this.charLimbs) {
-      this.charLimbs.leftLeg.rotation.x = 0;
-      this.charLimbs.rightLeg.rotation.x = 0;
-      this.charLimbs.body.position.y = 0.85;
-      this.charLimbs.head.position.y = 1.38;
-      this.charLimbs.body.rotation.set(0, 0, 0);
-      this.charLimbs.head.rotation.set(0, 0, 0);
-      this.charLimbs.gassho.rotation.set(0, 0, 0);
+    if (!this.pagodaIsRunning) {
+      this.resetCharacterPose();
     }
     return this.pagodaIsRunning;
   }
@@ -2368,12 +2374,7 @@ class Bomunsa3D {
     if (this.candleFlames) this.candleFlames.forEach(f => f.visible = false);
     if (this.incenseSmokes) this.incenseSmokes.forEach(s => s.visible = false);
 
-    if (this.charLimbs) {
-      this.charLimbs.leftLeg.rotation.x = 0;
-      this.charLimbs.rightLeg.rotation.x = 0;
-      this.charLimbs.leftArm.rotation.x = 0;
-      this.charLimbs.rightArm.rotation.x = 0;
-    }
+    this.resetCharacterPose();
 
     if (window.templeAudio) {
       window.templeAudio.stopMoktakLoop();
@@ -2414,8 +2415,9 @@ class Bomunsa3D {
           this.walkAnimTime += delta * 6.5;
           this.charLimbs.leftLeg.rotation.x = Math.sin(this.walkAnimTime) * 0.45;
           this.charLimbs.rightLeg.rotation.x = -Math.sin(this.walkAnimTime) * 0.45;
-          this.charLimbs.body.position.y = 0.85 + Math.abs(Math.sin(this.walkAnimTime)) * 0.03;
-          this.charLimbs.head.position.y = 1.38 + Math.abs(Math.sin(this.walkAnimTime)) * 0.02;
+          if (this.charLimbs.upperBody) {
+            this.charLimbs.upperBody.position.y = 0.50 + Math.abs(Math.sin(this.walkAnimTime)) * 0.03;
+          }
 
           this.footstepTimer += delta;
           if (this.footstepTimer > 0.52) {
@@ -2445,10 +2447,7 @@ class Bomunsa3D {
           }
         }
       } else {
-        this.charLimbs.leftLeg.rotation.x = 0;
-        this.charLimbs.rightLeg.rotation.x = 0;
-        this.charLimbs.body.position.y = 0.85;
-        this.charLimbs.head.position.y = 1.38;
+        this.resetCharacterPose();
       }
       this.updateCameraPosition();
     }
@@ -2458,37 +2457,34 @@ class Bomunsa3D {
         this.pagodaBowElapsed += delta;
         const bowT = Math.min(1.0, this.pagodaBowElapsed / this.pagodaBowDuration);
 
-        // [요청 반영: 반배 타임을 3.8초로 넉넉히 늘려 눈에 띄게 경건한 합장 반배 연출 (숙임 -> 멈춤 -> 일어섬)]
+        // [사용자 요청 반영: 반배가 확실하게 보이도록 허리 피벗(upperBody) 기준 약 48도 깊고 정중한 숙임]
         let ease = 0;
-        if (bowT < 0.38) {
-          const t = bowT / 0.38;
+        if (bowT < 0.35) {
+          const t = bowT / 0.35;
           ease = t * t * (3 - 2 * t);
-        } else if (bowT < 0.65) {
+        } else if (bowT < 0.68) {
           ease = 1.0;
         } else {
-          const t = (bowT - 0.65) / 0.35;
+          const t = (bowT - 0.68) / 0.32;
           ease = 1.0 - t * t * (3 - 2 * t);
         }
 
-        const bowAngle = ease * 0.58; // 약 33도 정중하고 깊은 합장 반배
-        this.charLimbs.body.rotation.x = bowAngle;
-        this.charLimbs.head.rotation.x = ease * 0.40;
-        this.charLimbs.gassho.rotation.x = bowAngle;
-        this.charLimbs.gassho.position.y = 0.85 - ease * 0.09;
+        const bowAngle = ease * 0.85; // 허리 기준 약 48.7도 확실하게 깊숙이 숙이는 반배
+        if (this.charLimbs.upperBody) {
+          this.charLimbs.upperBody.rotation.x = bowAngle;
+        }
+        this.charLimbs.gassho.rotation.x = ease * 0.25;
 
-        // 카메라: 남쪽 황금 연꽃 디딤돌에서 탑을 향해 반배하는 캐릭터가 온전히 다 보이도록 정면 구도
+        // [핵심 개선: 등 뒤 정면이 아닌 3/4 측면 정면 구도로 카메라 배치 -> 허리 숙임, 고개 숙임, 하얀 합장 손, 묘보탑이 한눈에 극명하게 보임!]
         const px = this.pagodaPos.x;
         const pz = this.pagodaPos.z + this.pagodaRadius;
-        const camPos = new THREE.Vector3(px, 1.95, pz + 4.2);
-        this.camera.position.lerp(camPos, 0.08);
-        this.camera.lookAt(new THREE.Vector3(px, 1.25, pz - 1.5));
+        const camPos = new THREE.Vector3(px + 2.5, 1.38, pz + 2.1);
+        this.camera.position.lerp(camPos, 0.12);
+        this.camera.lookAt(new THREE.Vector3(px, 0.92, pz - 1.2));
 
         if (bowT >= 1.0) {
           this.isPagodaBowing = false;
-          this.charLimbs.body.rotation.x = 0;
-          this.charLimbs.head.rotation.x = 0;
-          this.charLimbs.gassho.rotation.x = 0;
-          this.charLimbs.gassho.position.set(0, 0.85, 0.22);
+          this.resetCharacterPose();
 
           const next = this.pagodaNextStep;
           if (next === 1) {
@@ -2540,20 +2536,18 @@ class Bomunsa3D {
         // 시계 방향(우요삼잡) 보행 방향 각도
         this.characterGroup.rotation.y = -this.pagodaAngle;
 
-        // [요청 반영: 걷는 모습 연출 - 양다리 교차 스윙 + 몸체 바운스 + 어깨 율동]
+        // [요청 반영: 걷는 모습 연출 - 양다리 교차 스윙 + 상체 피벗 바운스 + 어깨 율동]
         this.walkAnimTime += delta * 5.6;
         const legSwing = Math.sin(this.walkAnimTime) * 0.44;
         this.charLimbs.leftLeg.rotation.x = legSwing;
         this.charLimbs.rightLeg.rotation.x = -legSwing;
 
         const walkBob = Math.abs(Math.sin(this.walkAnimTime)) * 0.04;
-        this.charLimbs.body.position.y = 0.85 + walkBob;
-        this.charLimbs.head.position.y = 1.38 + walkBob;
-        this.charLimbs.gassho.position.y = 0.85 + walkBob;
-
         const torsoTwist = Math.sin(this.walkAnimTime) * 0.05;
-        this.charLimbs.body.rotation.y = torsoTwist;
-        this.charLimbs.gassho.rotation.y = torsoTwist;
+        if (this.charLimbs.upperBody) {
+          this.charLimbs.upperBody.position.y = 0.50 + walkBob;
+          this.charLimbs.upperBody.rotation.y = torsoTwist;
+        }
 
         // 발자국 이펙트 및 보행 발소리
         this.lastFootprintDist += angularSpeed * this.pagodaRadius * delta;
