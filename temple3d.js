@@ -300,12 +300,7 @@ class Bomunsa3D {
     this.createSansingak(20, 0, -18);
     this.createSeokguram(-18, 0, -22);
 
-    // [사용자 요청 반영: 각 전각과 묘보탑 앞 어디인지 장소를 알려주는 고품격 전통 문패/안내 표석 설치]
-    this.createStandingMarker(3.2, 0, 30.2, '호지문', '四天王門 · 보문사 입구', 0);
-    this.createStandingMarker(-12.8, 0, 8.4, '묘보탑', '八角九層石塔 · 월정사 양식', 0);
-    this.createStandingMarker(3.6, 0, -8.0, '대웅전', '大雄殿 · 보문사 주법당', 0);
-    this.createStandingMarker(17.2, 0, -12.0, '산신각', '山神閣 · 칠성·독성·산신', 0);
-    this.createStandingMarker(-14.4, 0, -12.8, '석굴암', '石窟法堂 · 천연동굴 법당', 0);
+    // [사용자 요청 반영: 보행 진로를 방해하는 바깥 안내판을 모두 철거하고, 건물 처마 현판으로 일원화]
 
     this.createEnvironmentDetails();
   }
@@ -488,8 +483,8 @@ class Bomunsa3D {
     group.position.set(x, y, z);
     this.scene.add(group);
 
-    // [요청 반영: 호지문 번쩍거림 방지 - 단청 전면(z=2.10)보다 0.05m 앞으로 배치하여 완벽 밀착 및 Z-fighting 방지]
-    this.createSignboard(group, '호지문 (사천왕문)', 0, 4.52, 2.15);
+    // [요청 반영: 건물 처마 단청보에 품격 있는 전통 현판 설치 - Z-fighting 번쩍거림 방지 오프셋 적용]
+    this.createSignboard(group, '호지문', '四天王門', 0, 4.52, 2.18, 2.5, 0.68);
 
     this.registerInteractable({
       id: 'hojimun',
@@ -533,6 +528,9 @@ class Bomunsa3D {
     const finial = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), new THREE.MeshStandardMaterial({ color: 0xbfa760, roughness: 0.3, metalness: 0.6 }));
     finial.position.y = currentY + 0.4;
     pagoda.add(finial);
+
+    // [사용자 요청 반영: 보행 진로 방해 없는 석탑 기단부 자체 현판 부착]
+    this.createPagodaBasePlaque(pagoda);
 
     this.pagodaPos = new THREE.Vector3(x, y, z);
     pagoda.position.set(x, y, z);
@@ -580,7 +578,8 @@ class Bomunsa3D {
     daewoong.position.set(x, y, z);
     this.scene.add(daewoong);
 
-    this.createSignboard(daewoong, '대웅전 (大雄殿)', 0, 5.8, 4.4);
+    // [사용자 요청 반영: 전각 처마 단청면에 번쩍거림/Z-fighting 없는 품격 높은 3D 전통 현판 부착]
+    this.createSignboard(daewoong, '대웅전', '大雄殿', 0, 5.82, 4.72, 2.8, 0.76);
     this.createStoneLantern(x - 4.2, 0, z + 6.5);
     this.createStoneLantern(x + 4.2, 0, z + 6.5);
 
@@ -605,8 +604,8 @@ class Bomunsa3D {
     sansin.position.set(x, y, z);
     this.scene.add(sansin);
 
-    // [요청 반영: 언덕 및 계단 단차 제거, 완전한 평지(y=0)로 구현]
-    this.createSignboard(sansin, '산신각 (山神閣)', 0, 4.1, 2.35);
+    // [요청 반영: 건물 처마 단청면에 번쩍거림 없는 3D 전통 현판 부착]
+    this.createSignboard(sansin, '산신각', '山神閣', 0, 4.22, 2.72, 2.2, 0.62);
 
     this.addObstacle(x, z, 3.8);
 
@@ -670,7 +669,8 @@ class Bomunsa3D {
     group.position.set(x, y, z);
     this.scene.add(group);
 
-    this.createSignboard(group, '보문사 석굴암 (石窟庵)', 0, 5.2, 3.7);
+    // [요청 반영: 석굴암 정면 처마에 번쩍거림 없는 3D 석조/목조 현판 부착]
+    this.createSignboard(group, '보문사 석굴암', '石窟法堂', 0, 4.60, 3.68, 2.9, 0.74);
 
     this.addObstacle(x, z, 5.0);
     this.addObstacle(x, z + 2.2, 3.6);
@@ -1723,113 +1723,145 @@ class Bomunsa3D {
     return this.isIncenseLit;
   }
 
-  createSignboard(parent, text, x, y, z) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#1c1b18';
-    ctx.fillRect(0, 0, 512, 128);
-    ctx.strokeStyle = '#c9a44c';
-    ctx.lineWidth = 10;
-    ctx.strokeRect(8, 8, 496, 112);
-    ctx.fillStyle = '#f0c660';
-    ctx.font = 'bold 44px "Noto Serif KR", serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 256, 64);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4 }));
-    sign.position.set(x, y, z);
-    parent.add(sign);
-  }
-
-  // [사용자 요청 반영: 각 전각 및 묘보탑 앞 어디인지 장소를 한눈에 알려주는 전통 목조 문패/표지석 설치]
-  createStandingMarker(x, y, z, title, subTitle, rotY = 0) {
+  // [사용자 요청 반영: 전각 건물 처마에 품격 있게 걸리는 3D 전통 현판 (번쩍거림/Z-fighting 100% 방지)]
+  createSignboard(parent, title, subTitle, x, y, z, width = 2.6, height = 0.72) {
     const group = new THREE.Group();
 
-    // 1. 화강암 기단석 (Granite pedestal)
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x9a9890, roughness: 0.85 });
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.22, 0.45), baseMat);
-    base.position.y = 0.11;
-    base.castShadow = true;
-    base.receiveShadow = true;
-    group.add(base);
-
-    // 2. 고목 기둥 2개 (Dark wood posts)
-    const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2716, roughness: 0.75 });
-    const postGeo = new THREE.CylinderGeometry(0.045, 0.05, 1.45, 10);
-    const leftPost = new THREE.Mesh(postGeo, woodMat);
-    leftPost.position.set(-0.48, 0.8, 0);
-    const rightPost = new THREE.Mesh(postGeo, woodMat);
-    rightPost.position.set(0.48, 0.8, 0);
-    group.add(leftPost);
-    group.add(rightPost);
-
-    // 3. 전통 옻칠 현판 문패 보드 (CanvasTexture: 짙은 흑갈색 목판 + 금색 쌍선 테두리 + 금박 서체)
+    // 1. 고해상도 캔버스 텍스처 (1024x288)
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 256;
+    canvas.width = 1024;
+    canvas.height = 288;
     const ctx = canvas.getContext('2d');
 
-    // 옻칠 흑갈색 배경
-    ctx.fillStyle = '#1c1712';
-    ctx.fillRect(0, 0, 512, 256);
+    // 칠흑빛 옻칠 목판 바탕 (Deep black-brown lacquer wood)
+    ctx.fillStyle = '#141210';
+    ctx.fillRect(0, 0, 1024, 288);
 
-    // 전통 이중 금테
-    ctx.strokeStyle = '#c9a44c';
-    ctx.lineWidth = 10;
-    ctx.strokeRect(10, 10, 492, 236);
-    ctx.strokeStyle = '#8a6a24';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(22, 22, 468, 212);
+    // 전통 사찰 현판 이중 금박 테두리 (Traditional double gold borders)
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 14;
+    ctx.strokeRect(12, 12, 1000, 264);
 
-    // 전각 명칭 (Bold Gold Hangul Calligraphy)
-    ctx.fillStyle = '#f7d070';
-    ctx.font = 'bold 64px "Noto Serif KR", serif';
+    ctx.strokeStyle = '#8c6e26';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(26, 26, 972, 236);
+
+    // 내부 모서리 전통 문양 포인트
+    ctx.fillStyle = '#d4af37';
+    [[32, 32], [992, 32], [32, 256], [992, 256]].forEach(([px, py]) => {
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 전각 명칭 (Bold Dignified Gold Hangul Calligraphy)
+    ctx.fillStyle = '#ffd966';
+    ctx.font = 'bold 92px "Noto Serif KR", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(title, 256, 105);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 4;
 
-    // 한자 및 부제 설명 (Gold Subtitle)
     if (subTitle) {
-      ctx.fillStyle = '#c7ab63';
-      ctx.font = '500 28px "Noto Serif KR", serif';
-      ctx.fillText(subTitle, 256, 178);
+      ctx.fillText(title, 512, 112);
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#d8bb6f';
+      ctx.font = '600 42px "Noto Serif KR", serif';
+      ctx.fillText(subTitle, 512, 206);
+    } else {
+      ctx.fillText(title, 512, 144);
     }
 
     const tex = new THREE.CanvasTexture(canvas);
-    const boardMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45 });
-    const boardGeo = new THREE.PlaneGeometry(0.96, 0.52);
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
 
-    // 앞면 문패
-    const boardFront = new THREE.Mesh(boardGeo, boardMat);
-    boardFront.position.set(0, 0.95, 0.02);
-    group.add(boardFront);
+    // 2. 3D 원목 프레임 몸체 (BoxGeometry로 실물 두께 0.08m 부여하여 평면 깜빡임 완전 박멸)
+    const frameDepth = 0.08;
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: 0x221a12,
+      roughness: 0.7
+    });
+    const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, frameDepth), frameMat);
+    group.add(frameMesh);
 
-    // 뒷면 백보드
-    const backMat = new THREE.MeshStandardMaterial({ color: 0x2e1c10, roughness: 0.8 });
-    const boardBack = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.56, 0.04), backMat);
-    boardBack.position.set(0, 0.95, 0);
-    group.add(boardBack);
+    // 3. 전면 금박 현판 면 (Frame 바로 앞면에 밀착 + polygonOffset으로 번쩍거림/Z-fighting 영구 방지)
+    const signMat = new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: 0.35,
+      metalness: 0.1,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2
+    });
+    const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.06, height - 0.06), signMat);
+    signMesh.position.z = frameDepth / 2 + 0.005;
+    group.add(signMesh);
 
-    // 4. 상단 미니 전통 기와지붕 (Traditional mini hanok tiled roof)
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0x2b3238, roughness: 0.7 });
-    const roofRidge = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.52), roofMat);
-    roofRidge.position.y = 1.32;
-    group.add(roofRidge);
-
-    const roofCap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.34, 8), new THREE.MeshStandardMaterial({ color: 0x1f2326, roughness: 0.6 }));
-    roofCap.rotation.z = Math.PI / 2;
-    roofCap.position.y = 1.39;
-    group.add(roofCap);
+    // 4. 상단 현판 걸개 고리 (철제 고리 2개로 처마에 단단히 매달린 입체 연출)
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5, metalness: 0.8 });
+    const hookGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.16, 8);
+    const leftHook = new THREE.Mesh(hookGeo, ironMat);
+    leftHook.position.set(-width * 0.32, height / 2 + 0.08, 0);
+    const rightHook = new THREE.Mesh(hookGeo, ironMat);
+    rightHook.position.set(width * 0.32, height / 2 + 0.08, 0);
+    group.add(leftHook);
+    group.add(rightHook);
 
     group.position.set(x, y, z);
-    group.rotation.y = rotY;
-    this.scene.add(group);
-    this.addObstacle(x, z, 0.6);
+    parent.add(group);
     return group;
+  }
+
+  // [사용자 요청 반영: 석탑 본체 기단부에 밀착 부착되는 석조 현판 명판 (보행 진로 방해 제로)]
+  createPagodaBasePlaque(pagoda) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+
+    // 흑요석/오석 바탕
+    ctx.fillStyle = '#181a1c';
+    ctx.fillRect(0, 0, 512, 160);
+
+    // 전통 금박 테두리
+    ctx.strokeStyle = '#c9a44c';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(8, 8, 496, 144);
+
+    // 금박 서체
+    ctx.fillStyle = '#ffd766';
+    ctx.font = 'bold 52px "Noto Serif KR", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('묘보탑', 256, 56);
+
+    ctx.fillStyle = '#c7ab63';
+    ctx.font = '500 26px "Noto Serif KR", serif';
+    ctx.fillText('八角九層石塔', 256, 114);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const plaqueMat = new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: 0.4,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2
+    });
+
+    const plaqueGroup = new THREE.Group();
+    const stoneFrame = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.42, 0.06), new THREE.MeshStandardMaterial({ color: 0x2c2e30, roughness: 0.8 }));
+    plaqueGroup.add(stoneFrame);
+
+    const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.37), plaqueMat);
+    faceMesh.position.z = 0.035;
+    plaqueGroup.add(faceMesh);
+
+    // 묘보탑 2단 기단 정면(남쪽 z=+2.22, y=1.15)에 밀착 부착 (진로 방해 제로)
+    plaqueGroup.position.set(0, 1.15, 2.22);
+    pagoda.add(plaqueGroup);
   }
 
   createStoneLantern(x, y, z) {
