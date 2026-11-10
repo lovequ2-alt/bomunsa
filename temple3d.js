@@ -49,7 +49,10 @@ class Bomunsa3D {
     this.pagodaIsRunning = false;
     this.isPagodaBowing = false;
     this.pagodaBowElapsed = 0;
-    this.pagodaBowDuration = 2.4;
+    this.pagodaBowDuration = 3.8; // [요청 반영: 반배 타임을 3.8초로 넉넉히 늘려 경건한 반배 동작이 확실히 눈에 띄도록 설정]
+    this.pagodaStep = 0;
+    this.pagodaNextStep = 1;
+    this.pagodaBowIsFinal = false;
     this.footprints = [];
     this.lastFootprintDist = 0;
     this.footprintStepSide = 1;
@@ -2214,24 +2217,20 @@ class Bomunsa3D {
     }
   }
 
-  startPagodaSpin() {
-    this.currentMode = 'pagoda_spin';
-    this.pagodaAngle = Math.PI / 2; // 남쪽 (z + 6.2) 황금 연꽃 표식
-    this.pagodaTotalAngle = 0;
-    this.pagodaRoundsCompleted = 0;
-    this.clearFootprints();
-
-    // [요청 반영: 1단계 - 탑돌이 시작 전 탑을 향해 정성껏 합장 반배 올리기]
+  // [사용자 요청 반영: 한 바퀴 돌 때마다 남쪽에서 멈춰 탑을 향해 반배, 다 돌고 나서 마무리 반배]
+  triggerPagodaBow(roundTitle, roundDesc, nextStep, isFinal = false) {
     this.isPagodaBowing = true;
     this.pagodaBowElapsed = 0;
     this.pagodaIsRunning = false;
+    this.pagodaNextStep = nextStep;
+    this.pagodaBowIsFinal = isFinal;
 
-    // 남쪽 출발 표식에 캐릭터 위치 및 탑(북쪽)을 마주보도록 정렬
+    // 남쪽 출발 표식에 캐릭터 위치 및 묘보탑(북쪽)을 정면으로 마주보도록 정렬
     const px = this.pagodaPos.x;
     const pz = this.pagodaPos.z + this.pagodaRadius;
     this.playerPos.set(px, 0, pz);
     this.characterGroup.position.copy(this.playerPos);
-    this.characterGroup.rotation.y = Math.PI; // 묘보탑(북쪽)을 정면으로 경건하게 마주봄
+    this.characterGroup.rotation.y = Math.PI; // 묘보탑(북쪽) 정면 마주봄
 
     // 사지 초기 정자세 복원
     if (this.charLimbs) {
@@ -2245,14 +2244,31 @@ class Bomunsa3D {
       this.charLimbs.gassho.rotation.set(0, 0, 0);
     }
 
-    if (window.templeAudio) window.templeAudio.playSingleMoktak();
+    if (isFinal) {
+      if (window.templeAudio) window.templeAudio.playSingingBowl(216, 9.0);
+    } else {
+      if (window.templeAudio) window.templeAudio.playSingleMoktak();
+    }
+
     if (window.onPagodaRoundUpdate) {
-      window.onPagodaRoundUpdate('합장 반배(半拜) 올리기 🙏', '정성을 다해 탑을 향해 반배를 올리며 탑돌이를 시작합니다.', false, true);
+      window.onPagodaRoundUpdate(roundTitle, roundDesc, false, true);
     }
   }
 
+  startPagodaSpin() {
+    this.currentMode = 'pagoda_spin';
+    this.pagodaAngle = Math.PI / 2; // 남쪽 (z + 6.2) 황금 연꽃 표식
+    this.pagodaTotalAngle = 0;
+    this.pagodaRoundsCompleted = 0;
+    this.pagodaStep = 0;
+    this.clearFootprints();
+
+    // 1단계: 탑돌이 시작 전 탑을 향해 정성껏 합장 반배 올리기
+    this.triggerPagodaBow('탑돌이 시작 반배 🙏', '몸과 마음을 경건히 모아 탑을 향해 합장 반배를 올립니다.', 1, false);
+  }
+
   togglePagodaSpin() {
-    if (this.currentMode !== 'pagoda_spin' || this.pagodaRoundsCompleted >= 3) {
+    if (this.currentMode !== 'pagoda_spin' || this.pagodaStep >= 7) {
       this.startPagodaSpin();
       return true;
     }
@@ -2442,43 +2458,71 @@ class Bomunsa3D {
         this.pagodaBowElapsed += delta;
         const bowT = Math.min(1.0, this.pagodaBowElapsed / this.pagodaBowDuration);
 
-        // [요청 반영: 탑돌이 시작 전 경건한 합장 반배 이징 (0 -> 1 -> 0)]
+        // [요청 반영: 반배 타임을 3.8초로 넉넉히 늘려 눈에 띄게 경건한 합장 반배 연출 (숙임 -> 멈춤 -> 일어섬)]
         let ease = 0;
-        if (bowT < 0.42) {
-          const t = bowT / 0.42;
+        if (bowT < 0.38) {
+          const t = bowT / 0.38;
           ease = t * t * (3 - 2 * t);
-        } else if (bowT < 0.62) {
+        } else if (bowT < 0.65) {
           ease = 1.0;
         } else {
-          const t = (bowT - 0.62) / 0.38;
-          ease = 1 - t * t * (3 - 2 * t);
+          const t = (bowT - 0.65) / 0.35;
+          ease = 1.0 - t * t * (3 - 2 * t);
         }
 
-        const bowAngle = ease * 0.52; // 약 30도 정중한 반배
+        const bowAngle = ease * 0.58; // 약 33도 정중하고 깊은 합장 반배
         this.charLimbs.body.rotation.x = bowAngle;
-        this.charLimbs.head.rotation.x = ease * 0.38;
+        this.charLimbs.head.rotation.x = ease * 0.40;
         this.charLimbs.gassho.rotation.x = bowAngle;
-        this.charLimbs.gassho.position.y = 0.85 - ease * 0.08;
+        this.charLimbs.gassho.position.y = 0.85 - ease * 0.09;
 
         // 카메라: 남쪽 황금 연꽃 디딤돌에서 탑을 향해 반배하는 캐릭터가 온전히 다 보이도록 정면 구도
         const px = this.pagodaPos.x;
         const pz = this.pagodaPos.z + this.pagodaRadius;
-        const camPos = new THREE.Vector3(px, 2.0, pz + 4.6);
+        const camPos = new THREE.Vector3(px, 1.95, pz + 4.2);
         this.camera.position.lerp(camPos, 0.08);
-        this.camera.lookAt(new THREE.Vector3(px, 1.15, pz - 1.2));
+        this.camera.lookAt(new THREE.Vector3(px, 1.25, pz - 1.5));
 
         if (bowT >= 1.0) {
-          // 반배 완료! 이제 시계 방향(우요삼잡) 탑돌이 걷기 본격 시작
           this.isPagodaBowing = false;
           this.charLimbs.body.rotation.x = 0;
           this.charLimbs.head.rotation.x = 0;
           this.charLimbs.gassho.rotation.x = 0;
           this.charLimbs.gassho.position.set(0, 0.85, 0.22);
 
-          this.pagodaIsRunning = true;
-          if (window.templeAudio) window.templeAudio.playSingleMoktak();
-          if (window.onPagodaRoundUpdate) {
-            window.onPagodaRoundUpdate('첫 번째 바퀴', '지난 모든 번뇌와 허물을 비워냅니다. 🙏', false, false);
+          const next = this.pagodaNextStep;
+          if (next === 1) {
+            // 1바퀴 걷기 시작
+            this.pagodaStep = 1;
+            this.pagodaIsRunning = true;
+            if (window.templeAudio) window.templeAudio.playSingleMoktak();
+            if (window.onPagodaRoundUpdate) {
+              window.onPagodaRoundUpdate('첫 번째 바퀴', '지난 모든 번뇌와 허물을 비워냅니다. 🙏', false, false);
+            }
+          } else if (next === 3) {
+            // 2바퀴 걷기 시작
+            this.pagodaStep = 3;
+            this.pagodaIsRunning = true;
+            if (window.templeAudio) window.templeAudio.playSingleMoktak();
+            if (window.onPagodaRoundUpdate) {
+              window.onPagodaRoundUpdate('두 번째 바퀴', '나와 이웃을 위해 자비로운 마음을 품습니다. 🙏', false, false);
+            }
+          } else if (next === 5) {
+            // 3바퀴 걷기 시작
+            this.pagodaStep = 5;
+            this.pagodaIsRunning = true;
+            if (window.templeAudio) window.templeAudio.playSingleMoktak();
+            if (window.onPagodaRoundUpdate) {
+              window.onPagodaRoundUpdate('세 번째 바퀴', '모든 생명이 평안하기를 간절히 발원합니다. 🙏', false, false);
+            }
+          } else if (next === 7) {
+            // 3바퀴 완료 후 마지막 마무리 반배까지 마침 -> 완전 회향!
+            this.pagodaStep = 7;
+            this.pagodaIsRunning = false;
+            this.characterGroup.rotation.y = Math.PI;
+            if (window.onPagodaRoundUpdate) {
+              window.onPagodaRoundUpdate('탑돌이 원만 회향 🙏', '3바퀴 탑돌이를 원만히 마쳤습니다. 간절한 모든 서원이 성취되기를 축원합니다. 🙏', true, false);
+            }
           }
         }
       }
@@ -2520,38 +2564,21 @@ class Bomunsa3D {
           if (window.templeAudio) window.templeAudio.playFootstep(true);
         }
 
-        const currentRounds = Math.floor(this.pagodaTotalAngle / (Math.PI * 2));
-        if (currentRounds !== this.pagodaRoundsCompleted) {
-          this.pagodaRoundsCompleted = currentRounds;
-          if (this.pagodaRoundsCompleted === 1) {
-            if (window.templeAudio) window.templeAudio.playSingleMoktak();
-            if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('두 번째 바퀴', '나와 이웃을 위해 자비로운 마음을 품습니다. 🙏', false, false);
-            }
-          } else if (this.pagodaRoundsCompleted === 2) {
-            if (window.templeAudio) window.templeAudio.playSingleMoktak();
-            if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('세 번째 바퀴', '모든 생명이 평안하기를 간절히 발원합니다. 🙏', false, false);
-            }
-          } else if (this.pagodaRoundsCompleted >= 3) {
-            this.pagodaIsRunning = false;
-            this.charLimbs.leftLeg.rotation.x = 0;
-            this.charLimbs.rightLeg.rotation.x = 0;
-            this.charLimbs.body.position.y = 0.85;
-            this.charLimbs.head.position.y = 1.38;
-            this.charLimbs.gassho.position.set(0, 0.85, 0.22);
-            this.charLimbs.body.rotation.set(0, 0, 0);
-            this.charLimbs.head.rotation.set(0, 0, 0);
-            this.charLimbs.gassho.rotation.set(0, 0, 0);
-
-            // 제자리 도착 후 탑을 정면으로 마주봄
-            this.characterGroup.rotation.y = Math.PI;
-
-            if (window.templeAudio) window.templeAudio.playSingingBowl(216, 9.0);
-            if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('탑돌이 원만 회향 🙏', '탑을 돌며 세운 모든 서원이 원만히 성취되기를 축원합니다. 🙏', true, false);
-            }
-          }
+        // [사용자 요청 반영: 한 바퀴 돌 때마다 남쪽 출발점에 멈춰 반배, 3바퀴 돌고 마무리 반배]
+        if (this.pagodaStep === 1 && this.pagodaTotalAngle >= Math.PI * 2) {
+          this.pagodaTotalAngle = Math.PI * 2;
+          this.pagodaAngle = Math.PI / 2;
+          this.triggerPagodaBow('첫 번째 바퀴 회향 반배 🙏', '지난 모든 번뇌와 허물을 비워내며 탑을 향해 반배를 올립니다.', 3, false);
+        }
+        else if (this.pagodaStep === 3 && this.pagodaTotalAngle >= Math.PI * 4) {
+          this.pagodaTotalAngle = Math.PI * 4;
+          this.pagodaAngle = Math.PI / 2;
+          this.triggerPagodaBow('두 번째 바퀴 회향 반배 🙏', '자비로운 마음을 품으며 탑을 향해 반배를 올립니다.', 5, false);
+        }
+        else if (this.pagodaStep === 5 && this.pagodaTotalAngle >= Math.PI * 6) {
+          this.pagodaTotalAngle = Math.PI * 6;
+          this.pagodaAngle = Math.PI / 2;
+          this.triggerPagodaBow('탑돌이 마무리 회향 반배 🙏', '간절한 서원이 원만히 성취되기를 축원하며 마지막 반배를 올립니다.', 7, true);
         }
 
         // [요청 반영: 캐릭터 시야 100% 확보 - 3인칭 숄더 팔로우 카메라 앵글]
