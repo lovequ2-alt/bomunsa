@@ -300,6 +300,13 @@ class Bomunsa3D {
     this.createSansingak(20, 0, -18);
     this.createSeokguram(-18, 0, -22);
 
+    // [사용자 요청 반영: 각 전각과 묘보탑 앞 어디인지 장소를 알려주는 고품격 전통 문패/안내 표석 설치]
+    this.createStandingMarker(3.2, 0, 30.2, '호지문', '四天王門 · 보문사 입구', 0);
+    this.createStandingMarker(-12.8, 0, 8.4, '묘보탑', '八角九層石塔 · 월정사 양식', 0);
+    this.createStandingMarker(3.6, 0, -8.0, '대웅전', '大雄殿 · 보문사 주법당', 0);
+    this.createStandingMarker(17.2, 0, -12.0, '산신각', '山神閣 · 칠성·독성·산신', 0);
+    this.createStandingMarker(-14.4, 0, -12.8, '석굴암', '石窟法堂 · 천연동굴 법당', 0);
+
     this.createEnvironmentDetails();
   }
 
@@ -1738,6 +1745,93 @@ class Bomunsa3D {
     parent.add(sign);
   }
 
+  // [사용자 요청 반영: 각 전각 및 묘보탑 앞 어디인지 장소를 한눈에 알려주는 전통 목조 문패/표지석 설치]
+  createStandingMarker(x, y, z, title, subTitle, rotY = 0) {
+    const group = new THREE.Group();
+
+    // 1. 화강암 기단석 (Granite pedestal)
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x9a9890, roughness: 0.85 });
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.22, 0.45), baseMat);
+    base.position.y = 0.11;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    group.add(base);
+
+    // 2. 고목 기둥 2개 (Dark wood posts)
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2716, roughness: 0.75 });
+    const postGeo = new THREE.CylinderGeometry(0.045, 0.05, 1.45, 10);
+    const leftPost = new THREE.Mesh(postGeo, woodMat);
+    leftPost.position.set(-0.48, 0.8, 0);
+    const rightPost = new THREE.Mesh(postGeo, woodMat);
+    rightPost.position.set(0.48, 0.8, 0);
+    group.add(leftPost);
+    group.add(rightPost);
+
+    // 3. 전통 옻칠 현판 문패 보드 (CanvasTexture: 짙은 흑갈색 목판 + 금색 쌍선 테두리 + 금박 서체)
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // 옻칠 흑갈색 배경
+    ctx.fillStyle = '#1c1712';
+    ctx.fillRect(0, 0, 512, 256);
+
+    // 전통 이중 금테
+    ctx.strokeStyle = '#c9a44c';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(10, 10, 492, 236);
+    ctx.strokeStyle = '#8a6a24';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(22, 22, 468, 212);
+
+    // 전각 명칭 (Bold Gold Hangul Calligraphy)
+    ctx.fillStyle = '#f7d070';
+    ctx.font = 'bold 64px "Noto Serif KR", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title, 256, 105);
+
+    // 한자 및 부제 설명 (Gold Subtitle)
+    if (subTitle) {
+      ctx.fillStyle = '#c7ab63';
+      ctx.font = '500 28px "Noto Serif KR", serif';
+      ctx.fillText(subTitle, 256, 178);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const boardMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45 });
+    const boardGeo = new THREE.PlaneGeometry(0.96, 0.52);
+
+    // 앞면 문패
+    const boardFront = new THREE.Mesh(boardGeo, boardMat);
+    boardFront.position.set(0, 0.95, 0.02);
+    group.add(boardFront);
+
+    // 뒷면 백보드
+    const backMat = new THREE.MeshStandardMaterial({ color: 0x2e1c10, roughness: 0.8 });
+    const boardBack = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.56, 0.04), backMat);
+    boardBack.position.set(0, 0.95, 0);
+    group.add(boardBack);
+
+    // 4. 상단 미니 전통 기와지붕 (Traditional mini hanok tiled roof)
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x2b3238, roughness: 0.7 });
+    const roofRidge = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.52), roofMat);
+    roofRidge.position.y = 1.32;
+    group.add(roofRidge);
+
+    const roofCap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.34, 8), new THREE.MeshStandardMaterial({ color: 0x1f2326, roughness: 0.6 }));
+    roofCap.rotation.z = Math.PI / 2;
+    roofCap.position.y = 1.39;
+    group.add(roofCap);
+
+    group.position.set(x, y, z);
+    group.rotation.y = rotY;
+    this.scene.add(group);
+    this.addObstacle(x, z, 0.6);
+    return group;
+  }
+
   createStoneLantern(x, y, z) {
     const group = new THREE.Group();
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xa8a69e, roughness: 0.85 });
@@ -2121,7 +2215,7 @@ class Bomunsa3D {
 
     if (window.templeAudio) window.templeAudio.playSingleMoktak();
     if (window.onPagodaRoundUpdate) {
-      window.onPagodaRoundUpdate(0, 3, '묘보탑을 향해 정성껏 합장 반배를 올리고 탑돌이를 시작합니다. 🙏', false, true);
+      window.onPagodaRoundUpdate('합장 반배(半拜) 올리기 🙏', '정성을 다해 탑을 향해 반배를 올리며 탑돌이를 시작합니다.', false, true);
     }
   }
 
@@ -2352,7 +2446,7 @@ class Bomunsa3D {
           this.pagodaIsRunning = true;
           if (window.templeAudio) window.templeAudio.playSingleMoktak();
           if (window.onPagodaRoundUpdate) {
-            window.onPagodaRoundUpdate(1, 3, '첫 번째 바퀴: 지난 모든 번뇌와 허물을 비워냅니다. 🙏', false, false);
+            window.onPagodaRoundUpdate('첫 번째 바퀴', '지난 모든 번뇌와 허물을 비워냅니다. 🙏', false, false);
           }
         }
       }
@@ -2400,12 +2494,12 @@ class Bomunsa3D {
           if (this.pagodaRoundsCompleted === 1) {
             if (window.templeAudio) window.templeAudio.playSingleMoktak();
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate(2, 3, '두 번째 바퀴: 나와 이웃을 위해 자비로운 마음을 품습니다.');
+              window.onPagodaRoundUpdate('두 번째 바퀴', '나와 이웃을 위해 자비로운 마음을 품습니다. 🙏', false, false);
             }
           } else if (this.pagodaRoundsCompleted === 2) {
             if (window.templeAudio) window.templeAudio.playSingleMoktak();
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate(3, 3, '세 번째 바퀴: 모든 생명이 평안하기를 간절히 발원합니다.');
+              window.onPagodaRoundUpdate('세 번째 바퀴', '모든 생명이 평안하기를 간절히 발원합니다. 🙏', false, false);
             }
           } else if (this.pagodaRoundsCompleted >= 3) {
             this.pagodaIsRunning = false;
@@ -2423,7 +2517,7 @@ class Bomunsa3D {
 
             if (window.templeAudio) window.templeAudio.playSingingBowl(216, 9.0);
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate(3, 3, '🎉 3바퀴 탑돌이를 원만히 마쳐 제자리에 섰습니다. 간절한 발원이 원만 성취되기를 축원합니다. 🙏', true);
+              window.onPagodaRoundUpdate('탑돌이 원만 회향 🙏', '탑을 돌며 세운 모든 서원이 원만히 성취되기를 축원합니다. 🙏', true, false);
             }
           }
         }

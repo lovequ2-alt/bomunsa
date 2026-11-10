@@ -118,26 +118,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3. 탑돌이 라운드 카운터 업데이트
-  window.onPagodaRoundUpdate = (round, maxRound, message, isFinished = false, isBowing = false) => {
+  // 3. 탑돌이 라운드 카운터 업데이트: [사용자 요청 반영: 1/3 제거, 2줄 표시 (1줄 몇번째, 2줄 발원 내용)]
+  window.onPagodaRoundUpdate = (roundTitle, roundDesc, isFinished = false, isBowing = false) => {
     pagodaCounterCard.classList.add('visible');
     if (isBowing) {
-      pagodaRoundDisplay.textContent = `합장 반배(半拜) 올리기 🙏`;
+      pagodaRoundDisplay.textContent = roundTitle || '합장 반배(半拜) 올리기 🙏';
       pagodaRoundDisplay.style.color = '#ffd766';
-      pagodaRoundDesc.textContent = message;
+      pagodaRoundDesc.textContent = roundDesc;
       bowBtn.classList.add('active');
       bowText.textContent = '합장 반배 중... 🙏';
     } else if (isFinished) {
-      pagodaRoundDisplay.textContent = `3 / 3 바퀴 (원만 회향 멈춤 🙏)`;
+      pagodaRoundDisplay.textContent = roundTitle || '탑돌이 원만 회향 🙏';
       pagodaRoundDisplay.style.color = '#ffd766';
-      pagodaRoundDesc.textContent = message;
+      pagodaRoundDesc.textContent = roundDesc;
       // 3바퀴 완료 시 버튼을 '탑돌이 다시 시작'으로 전환
       bowBtn.classList.remove('active');
       bowText.textContent = '탑돌이 다시 시작';
     } else {
-      pagodaRoundDisplay.textContent = `${round} / ${maxRound} 바퀴 진행 중`;
-      pagodaRoundDisplay.style.color = '#ffffff';
-      pagodaRoundDesc.textContent = message;
+      pagodaRoundDisplay.textContent = roundTitle;
+      pagodaRoundDisplay.style.color = '#ffd766';
+      pagodaRoundDesc.textContent = roundDesc;
       bowBtn.classList.add('active');
       bowText.textContent = '탑돌이 멈추기';
     }
@@ -265,11 +265,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // [방안 A] 삼배(절하기) 인터랙션
+  // [사용자 요청 반영: 삼배 인터랙션 (1/3 표기 제거)]
   const bowMeanings = [
-    '첫 번째 절: 지난 모든 허물과 번뇌를 비워냅니다. (1/3)',
-    '두 번째 절: 모든 이웃과 생명을 향해 자비로운 마음을 품습니다. (2/3)',
-    '세 번째 절: 지혜와 평안이 가득한 삶을 간절히 발원합니다. (3/3)'
+    '첫 번째 절: 지난 모든 허물과 번뇌를 비워냅니다.',
+    '두 번째 절: 모든 이웃과 생명을 향해 자비로운 마음을 품습니다.',
+    '세 번째 절: 지혜와 평안이 가득한 삶을 간절히 발원합니다.'
   ];
 
   bowBtn.addEventListener('click', () => {
