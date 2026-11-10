@@ -4,7 +4,7 @@
   "description": "산사 명상 및 참배 3D 가상 도량",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#0d0f12",
   "theme_color": "#0d0f12",
   "icons": [

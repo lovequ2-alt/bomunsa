@@ -1891,14 +1891,19 @@ class Bomunsa3D {
 
     const onPointerMove = (e) => {
       if (!this.isDragging) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const isTouch = !!e.touches;
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+      const clientY = isTouch ? e.touches[0].clientY : e.clientY;
 
       const deltaX = clientX - this.previousMousePosition.x;
       const deltaY = clientY - this.previousMousePosition.y;
 
-      this.cameraAngles.theta -= deltaX * 0.005;
-      this.cameraAngles.phi = Math.max(0.15, Math.min(Math.PI / 2.3, this.cameraAngles.phi + deltaY * 0.004));
+      // [모바일 터치 최적화]: 스마트폰에서 손가락을 살짝만 밀어도 시원하고 부드럽게 360도 회전하도록 감도 향상
+      const sensitivityX = isTouch ? 0.0078 : 0.005;
+      const sensitivityY = isTouch ? 0.0058 : 0.004;
+
+      this.cameraAngles.theta -= deltaX * sensitivityX;
+      this.cameraAngles.phi = Math.max(0.15, Math.min(Math.PI / 2.3, this.cameraAngles.phi + deltaY * sensitivityY));
 
       this.previousMousePosition = { x: clientX, y: clientY };
     };
@@ -1930,12 +1935,19 @@ class Bomunsa3D {
       this.cameraDistance = Math.max(4.5, Math.min(18, this.cameraDistance + e.deltaY * 0.01));
     }, { passive: true });
 
-    window.addEventListener('resize', () => {
-      const w = this.container.clientWidth || window.innerWidth;
-      const h = this.container.clientHeight || window.innerHeight;
+    // [화면 회전(가로/세로 전환) 완벽 대응]
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h);
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(handleResize, 80);
+      setTimeout(handleResize, 250);
     });
 
     window.addEventListener('keydown', (e) => {

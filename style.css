@@ -26,6 +26,14 @@ body, html {
   top: 0;
   left: 0;
   z-index: 1;
+  touch-action: none;
+}
+
+#canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  touch-action: none;
 }
 
 /* 상단 헤더 */
@@ -774,4 +782,67 @@ body.in-meditation .control-hint {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* 스마트폰 가로 모드 (Landscape) 최적화 */
+@media (orientation: landscape) and (max-height: 520px) {
+  header {
+    padding: 8px 16px;
+  }
+  .title-area h1 {
+    font-size: 1.05rem;
+  }
+  .bottom-nav-container {
+    bottom: 8px;
+    padding: 5px 10px;
+    gap: 6px;
+  }
+  .nav-pill {
+    padding: 6px 11px;
+    font-size: 0.78rem;
+  }
+  .control-hint {
+    bottom: 50px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+  }
+  .location-card {
+    top: 48px;
+    padding: 12px 18px;
+    max-width: 420px;
+  }
+  .location-card h2 {
+    font-size: 1.15rem;
+    margin-bottom: 4px;
+  }
+  .location-card p {
+    font-size: 0.82rem;
+    line-height: 1.35;
+    margin-bottom: 10px;
+  }
+  .enter-btn {
+    padding: 8px;
+    font-size: 0.88rem;
+  }
+  .meditation-overlay {
+    padding: 8px 12px 6px;
+  }
+  .meditation-menu-box {
+    margin-bottom: 2px;
+    width: min(540px, 92vw);
+  }
+  .action-grid {
+    gap: 5px 8px;
+  }
+  .control-grid-btn {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+  .menu-bottom-row {
+    gap: 6px;
+  }
+  .exit-btn {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
 }
