@@ -55,6 +55,23 @@ header * {
   pointer-events: auto;
 }
 
+.title-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+
 .title-area h1 {
   font-family: 'Noto Serif KR', serif;
   font-size: 1.25rem;
