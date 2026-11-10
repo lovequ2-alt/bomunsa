@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function refreshPrayerBadge(locationId) {
     const saved = localStorage.getItem(`bomunsa_prayer_${locationId}`);
     if (saved) {
-      activePrayerBadge.textContent = `🙏 나의 발원: "${saved}"`;
+      activePrayerBadge.textContent = `🪷 나의 발원: "${saved}"`;
       activePrayerBadge.classList.add('visible');
     } else {
       activePrayerBadge.classList.remove('visible');
@@ -118,17 +118,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3. 탑돌이 라운드 카운터 업데이트: [사용자 요청 반영: 1/3 제거, 2줄 표시 (1줄 몇번째, 2줄 발원 내용)]
+  // 3. 탑돌이 라운드 카운터 업데이트: [사용자 요청 반영: 1/3 및 🙏 제거, 깔끔한 2줄 표시]
   window.onPagodaRoundUpdate = (roundTitle, roundDesc, isFinished = false, isBowing = false) => {
     pagodaCounterCard.classList.add('visible');
     if (isBowing) {
-      pagodaRoundDisplay.textContent = roundTitle || '합장 반배(半拜) 올리기 🙏';
+      pagodaRoundDisplay.textContent = roundTitle || '합장 반배(半拜) 올리기';
       pagodaRoundDisplay.style.color = '#ffd766';
       pagodaRoundDesc.textContent = roundDesc;
       bowBtn.classList.add('active');
-      bowText.textContent = '합장 반배 중... 🙏';
+      bowText.textContent = '합장 반배 중...';
     } else if (isFinished) {
-      pagodaRoundDisplay.textContent = roundTitle || '탑돌이 원만 회향 🙏';
+      pagodaRoundDisplay.textContent = roundTitle || '탑돌이 원만 회향';
       pagodaRoundDisplay.style.color = '#ffd766';
       pagodaRoundDesc.textContent = roundDesc;
       // 3바퀴 완료 시 버튼을 '탑돌이 다시 시작'으로 전환
@@ -170,20 +170,20 @@ document.addEventListener('DOMContentLoaded', () => {
       candleBtn.style.display = 'none';
       incenseBtn.style.display = 'none';
 
-      // [요청 반영] 묘보탑 이동 시 3배 대신 '탑돌이' 표출 (시작 시 합장 반배 진행)
+      // [요청 반영] 묘보탑 이동 시 3배 대신 '탑돌이' 표출 (시작 시 합장 반배 진행, 🙏 및 🪵 제거하여 타 전각과 통일)
       bowBtn.style.gridColumn = '1 / -1';
       bowBtn.classList.add('active');
-      bowText.textContent = '합장 반배 중... 🙏';
+      bowText.textContent = '합장 반배 중...';
 
-      instrumentText.textContent = '🪵 목탁 울리기';
+      instrumentText.textContent = '목탁 울리기';
       instrumentBtn.onclick = () => {
         window.templeAudio.toggleMoktakLoop((isLooping) => {
           if (isLooping) {
             instrumentBtn.classList.add('active');
-            instrumentText.textContent = '🪵 목탁 멈추기';
+            instrumentText.textContent = '목탁 멈추기';
           } else {
             instrumentBtn.classList.remove('active');
-            instrumentText.textContent = '🪵 목탁 울리기';
+            instrumentText.textContent = '목탁 울리기';
           }
         });
       };
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isRunning = app.togglePagodaSpin();
       if (app.isPagodaBowing) {
         bowBtn.classList.add('active');
-        bowText.textContent = '합장 반배 중... 🙏';
+        bowText.textContent = '합장 반배 중...';
       } else if (isRunning) {
         bowBtn.classList.add('active');
         bowText.textContent = '탑돌이 멈추기';
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. 발원문 팝업 모달
   openPrayerBtn.addEventListener('click', () => {
     if (!app.activeLocation) return;
-    prayerModalTitle.textContent = `${app.activeLocation.name} 발원문(發願文)`;
+    prayerModalTitle.textContent = `🪷 ${app.activeLocation.name} 발원문(發願文)`;
     const saved = localStorage.getItem(`bomunsa_prayer_${app.activeLocation.id}`) || '';
     prayerInput.value = saved;
     prayerModalOverlay.classList.add('active');

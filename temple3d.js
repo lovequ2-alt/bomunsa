@@ -2276,7 +2276,7 @@ class Bomunsa3D {
     this.clearFootprints();
 
     // 1단계: 탑돌이 시작 전 탑을 향해 정성껏 합장 반배 올리기
-    this.triggerPagodaBow('탑돌이 시작 반배 🙏', '몸과 마음을 경건히 모아 탑을 향해 합장 반배를 올립니다.', 1, false);
+    this.triggerPagodaBow('탑돌이 시작 반배', '몸과 마음을 경건히 모아 탑을 향해 합장 반배를 올립니다.', 1, false);
   }
 
   togglePagodaSpin() {
@@ -2493,7 +2493,7 @@ class Bomunsa3D {
             this.pagodaIsRunning = true;
             if (window.templeAudio) window.templeAudio.playSingleMoktak();
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('첫 번째 바퀴', '지난 모든 번뇌와 허물을 비워냅니다. 🙏', false, false);
+              window.onPagodaRoundUpdate('첫 번째 바퀴', '지난 모든 번뇌와 허물을 비워냅니다.', false, false);
             }
           } else if (next === 3) {
             // 2바퀴 걷기 시작
@@ -2501,7 +2501,7 @@ class Bomunsa3D {
             this.pagodaIsRunning = true;
             if (window.templeAudio) window.templeAudio.playSingleMoktak();
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('두 번째 바퀴', '나와 이웃을 위해 자비로운 마음을 품습니다. 🙏', false, false);
+              window.onPagodaRoundUpdate('두 번째 바퀴', '나와 이웃을 위해 자비로운 마음을 품습니다.', false, false);
             }
           } else if (next === 5) {
             // 3바퀴 걷기 시작
@@ -2509,7 +2509,7 @@ class Bomunsa3D {
             this.pagodaIsRunning = true;
             if (window.templeAudio) window.templeAudio.playSingleMoktak();
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('세 번째 바퀴', '모든 생명이 평안하기를 간절히 발원합니다. 🙏', false, false);
+              window.onPagodaRoundUpdate('세 번째 바퀴', '모든 생명이 평안하기를 간절히 발원합니다.', false, false);
             }
           } else if (next === 7) {
             // 3바퀴 완료 후 마지막 마무리 반배까지 마침 -> 완전 회향!
@@ -2517,7 +2517,7 @@ class Bomunsa3D {
             this.pagodaIsRunning = false;
             this.characterGroup.rotation.y = Math.PI;
             if (window.onPagodaRoundUpdate) {
-              window.onPagodaRoundUpdate('탑돌이 원만 회향 🙏', '3바퀴 탑돌이를 원만히 마쳤습니다. 간절한 모든 서원이 성취되기를 축원합니다. 🙏', true, false);
+              window.onPagodaRoundUpdate('탑돌이 원만 회향', '3바퀴 탑돌이를 원만히 마쳤습니다. 간절한 모든 서원이 성취되기를 축원합니다.', true, false);
             }
           }
         }
@@ -2562,17 +2562,17 @@ class Bomunsa3D {
         if (this.pagodaStep === 1 && this.pagodaTotalAngle >= Math.PI * 2) {
           this.pagodaTotalAngle = Math.PI * 2;
           this.pagodaAngle = Math.PI / 2;
-          this.triggerPagodaBow('첫 번째 바퀴 회향 반배 🙏', '지난 모든 번뇌와 허물을 비워내며 탑을 향해 반배를 올립니다.', 3, false);
+          this.triggerPagodaBow('첫 번째 바퀴 회향 반배', '지난 모든 번뇌와 허물을 비워내며 탑을 향해 반배를 올립니다.', 3, false);
         }
         else if (this.pagodaStep === 3 && this.pagodaTotalAngle >= Math.PI * 4) {
           this.pagodaTotalAngle = Math.PI * 4;
           this.pagodaAngle = Math.PI / 2;
-          this.triggerPagodaBow('두 번째 바퀴 회향 반배 🙏', '자비로운 마음을 품으며 탑을 향해 반배를 올립니다.', 5, false);
+          this.triggerPagodaBow('두 번째 바퀴 회향 반배', '자비로운 마음을 품으며 탑을 향해 반배를 올립니다.', 5, false);
         }
         else if (this.pagodaStep === 5 && this.pagodaTotalAngle >= Math.PI * 6) {
           this.pagodaTotalAngle = Math.PI * 6;
           this.pagodaAngle = Math.PI / 2;
-          this.triggerPagodaBow('탑돌이 마무리 회향 반배 🙏', '간절한 서원이 원만히 성취되기를 축원하며 마지막 반배를 올립니다.', 7, true);
+          this.triggerPagodaBow('탑돌이 마무리 회향 반배', '간절한 서원이 원만히 성취되기를 축원하며 마지막 반배를 올립니다.', 7, true);
         }
 
         // [요청 반영: 캐릭터 시야 100% 확보 - 3인칭 숄더 팔로우 카메라 앵글]
