@@ -19,7 +19,7 @@ body, html {
   color: #f7f6f2;
 }
 
-/* [사용자 요청 반영: 호지문 진입 전 고즈넉한 정지 스플래시 화면] */
+/* [사용자 요청 반영: 대문 진입 전 고즈넉한 정지 스플래시 화면] */
 .splash-overlay {
   position: fixed;
   inset: 0;
@@ -68,10 +68,10 @@ body, html {
 }
 
 .splash-lotus-emblem {
-  width: 44px;
-  height: 44px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  background: #ffffff;
+  background: #fffcf5;
   border: 1.5px solid #d4af37;
   margin-top: -12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
@@ -79,11 +79,11 @@ body, html {
 
 .splash-title {
   font-family: 'Noto Serif KR', serif;
-  font-size: 2.25rem;
+  font-size: 1.82rem;
   font-weight: 700;
   color: #ffd966;
-  letter-spacing: 0.28em;
-  text-indent: 0.28em;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
   margin-bottom: 18px;
   text-shadow: 0 2px 14px rgba(212, 175, 55, 0.35);
 }
@@ -222,8 +222,8 @@ header * {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* [요청 반영: 상단 보문사와 전각 이름 겹침 완전 해결] */
-/* 전각/명상 모드 입장 시 상단 메인 '보문사' 타이틀 영역을 완전히 숨겨 전각 이름(보문사 대웅전/석굴암/산신각)만 단독 표출 */
+/* [요청 반영: 상단 사찰 타이틀과 전각 이름 겹침 완전 해결] */
+/* 전각/명상 모드 입장 시 상단 메인 타이틀 영역을 완전히 숨겨 전각 이름(대웅전/석굴암/산신각)만 단독 표출 */
 body.in-meditation header {
   justify-content: flex-end !important;
   background: transparent !important;

@@ -1,10 +1,10 @@
-// 보문사 웹앱 메인 컨트롤러
+// 저 절로 웹앱 메인 컨트롤러
 
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('canvas-container');
   const app = new Bomunsa3D(container);
 
-  // [사용자 요청 반영: 호지문 진입 전 정지화면 스플래시 (보문사 / 도심속 / 천년고찰 / 비구니사찰)]
+  // [사용자 요청 반영: 대문 진입 전 정지화면 스플래시 (절로 절로 저 절로 / 도심속 / 천년고찰 / 비구니 사찰입니다.)]
   const splashOverlay = document.getElementById('splash-overlay');
   if (splashOverlay) {
     const dismissSplash = () => {
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (meditationBtnText) meditationBtnText.textContent = '호흡 명상';
 
       if (currentLoc.id === 'seokguram') {
-        meditationTitle.textContent = '보문사 석굴암';
+        meditationTitle.textContent = '석굴암';
         if (meditationSub) meditationSub.style.display = 'none';
         instrumentText.textContent = '싱잉볼 치기';
         instrumentBtn.onclick = () => {
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
           window.templeAudio.playSingingBowl(196, 8.0);
         };
       } else if (currentLoc.id === 'daewoong') {
-        meditationTitle.textContent = '보문사 대웅전';
+        meditationTitle.textContent = '대웅전';
         if (meditationSub) meditationSub.style.display = 'none';
         instrumentText.textContent = '목탁 울리기';
         instrumentBtn.onclick = () => {
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         };
       } else if (currentLoc.id === 'sansin') {
-        meditationTitle.textContent = '보문사 산신각';
+        meditationTitle.textContent = '산신각';
         if (meditationSub) meditationSub.style.display = 'none';
         instrumentText.textContent = '싱잉볼 치기';
         instrumentBtn.onclick = () => {
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // [요청 반영] 보문사에 들어서면(첫 화면 터치/클릭 시) 장엄한 대형 범종 소리가 도량에 울려 퍼짐
+  // [요청 반영] 도량에 들어서면(첫 화면 터치/클릭 시) 장엄한 대형 범종 소리가 도량에 울려 퍼짐
   const firstTouchHandler = () => {
     if (window.templeAudio) {
       window.templeAudio.resume();

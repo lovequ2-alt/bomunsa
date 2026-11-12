@@ -1,7 +1,7 @@
 {
-  "name": "보문사 (普門寺) 3D 도량",
-  "short_name": "보문사",
-  "description": "산사 명상 및 참배 3D 가상 도량",
+  "name": "저 절로 3D 도량",
+  "short_name": "저 절로",
+  "description": "도심속 천년고찰 비구니 사찰 — 산사 명상 및 참배 3D 가상 도량",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",

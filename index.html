@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
-  <title>보문사 (普門寺) — 산사 명상 3D 도량</title>
+  <title>저 절로 — 도심속 천년고찰 3D 도량</title>
   <link rel="stylesheet" href="style.css">
   <!-- Three.js (r128) - 로컬 파일 및 CDN 이중 안전 로드 -->
   <script src="three.min.js"></script>
@@ -21,7 +21,7 @@
   </script>
 </head>
 <body>
-  <!-- [사용자 요청 반영: 호지문 진입 전 정지화면 스플래시 (전각 일러스트 + 보문사 / 도심속 / 천년고찰 / 비구니사찰)] -->
+  <!-- [사용자 요청 반영: 대문 진입 전 정지화면 스플래시 (전각 일러스트 + 절로 절로 저 절로 / 도심속 / 천년고찰 / 비구니 사찰입니다.)] -->
   <div id="splash-overlay" class="splash-overlay">
     <div class="splash-content">
       <div class="splash-temple-art">
@@ -37,13 +37,13 @@
           <line x1="90" y1="83" x2="90" y2="117" stroke="#d4af37" stroke-width="1.5"/>
           <line x1="34" y1="119" x2="146" y2="119" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
         </svg>
-        <img src="icon.png" class="splash-lotus-emblem" alt="보문사 로고">
+        <img src="icon.png" class="splash-lotus-emblem" alt="저 절로 로고">
       </div>
-      <h1 class="splash-title">보문사</h1>
+      <h1 class="splash-title">절로 절로 저 절로</h1>
       <div class="splash-lines">
         <p>도심속</p>
         <p>천년고찰</p>
-        <p>비구니사찰</p>
+        <p>비구니 사찰입니다.</p>
       </div>
     </div>
   </div>
@@ -54,8 +54,8 @@
   <!-- 상단 헤더 -->
   <header>
     <div class="title-area">
-      <img src="icon.png" class="header-logo" alt="보문사 로고">
-      <h1>보문사 <span>普門寺 · 쉼과 명상</span></h1>
+      <img src="icon.png" class="header-logo" alt="저 절로 로고">
+      <h1>저 절로 <span>도심속 쉼과 명상</span></h1>
     </div>
     <div class="header-actions">
       <button id="mute-btn" class="icon-btn" title="소리 켜기/끄기">🔔</button>
@@ -82,7 +82,7 @@
   <div id="meditation-overlay" class="meditation-overlay">
     <div class="meditation-header">
       <div id="temple-header-group">
-        <h2 id="meditation-title">보문사 석굴암</h2>
+        <h2 id="meditation-title">석굴암</h2>
         <p id="meditation-sub" style="display: none;"></p>
       </div>
 
@@ -143,7 +143,7 @@
   <!-- 발원문 작성 팝업 모달 -->
   <div id="prayer-modal-overlay" class="prayer-modal-overlay">
     <div class="prayer-modal">
-      <h3 id="prayer-modal-title">🪷 보문사 발원문(發願文)</h3>
+      <h3 id="prayer-modal-title">🪷 발원문(發願文)</h3>
       <p>도량에 머무는 지금, 간절한 소원이나 내려놓고 싶은 마음을 진솔하게 적어보세요.</p>
       <textarea id="prayer-input" class="prayer-textarea" placeholder="예: 가족의 건강과 평온을 발원하며, 마음에 깃든 불안을 모두 비워냅니다..."></textarea>
       <div class="prayer-modal-actions">
@@ -155,7 +155,7 @@
 
   <!-- 하단 랜드마크 내비게이션 바 -->
   <nav id="bottom-nav" class="bottom-nav-container">
-    <button class="nav-pill" data-id="hojimun">🚪 호지문(입구)</button>
+    <button class="nav-pill" data-id="hojimun">🚪 대문(입구)</button>
     <button class="nav-pill" data-id="pagoda">🗼 묘보탑(9층탑)</button>
     <button class="nav-pill" data-id="daewoong">🏛️ 대웅전</button>
     <button class="nav-pill" data-id="sansin">🌲 산신각</button>

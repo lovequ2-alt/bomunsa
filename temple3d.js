@@ -1,4 +1,4 @@
-// 보문사 3D 사찰 씬 및 인터랙션 엔진 (Three.js 기반)
+// 저 절로 3D 사찰 씬 및 인터랙션 엔진 (Three.js 기반)
 
 class Bomunsa3D {
   constructor(canvasContainer) {
@@ -132,81 +132,83 @@ class Bomunsa3D {
   createGasshoMonkCharacter() {
     this.characterGroup = new THREE.Group();
 
-    const robeMat = new THREE.MeshStandardMaterial({ color: 0x60666d, roughness: 0.75 });
+    const robeMat = new THREE.MeshStandardMaterial({ color: 0x626870, roughness: 0.75 });
+    const collarMat = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.5 });
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.45 });
-    const shoeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf0ede6, roughness: 0.65 });
 
-    // [사용자 요청 반영: 허리(y=0.50) 축 기준으로 상체·머리·합장손이 통째로 깊게 숙여지는 반배 피벗 구축]
+    // [사용자 요청 반영: 스케치(그림 1 오른쪽)처럼 단정하고 소박한 실루엣 + 허리(y=0.50) 반배 피벗 유지]
     const upperBodyPivot = new THREE.Group();
     upperBodyPivot.position.set(0, 0.50, 0);
 
-    // 1. 몸통 (부드러운 조약돌 곡선, 피벗 y=0.50 기준 +0.35 -> 0.85)
-    const bodyGeo = new THREE.SphereGeometry(0.38, 20, 20);
-    bodyGeo.scale(1.0, 1.25, 0.88);
-    const body = new THREE.Mesh(bodyGeo, robeMat);
-    body.position.y = 0.35;
-    body.castShadow = true;
+    // 1. 몸통 (아래로 차분히 떨어지는 깔끔한 A라인 승복 실루엣, 피벗 y=0.50 기준 +0.35)
+    const body = new THREE.Group();
+    body.position.set(0, 0.35, 0);
+
+    const tunicGeo = new THREE.CylinderGeometry(0.22, 0.33, 0.72, 24);
+    const tunicMesh = new THREE.Mesh(tunicGeo, robeMat);
+    tunicMesh.scale.set(1.0, 1.0, 0.86);
+    tunicMesh.castShadow = true;
+    body.add(tunicMesh);
+
+    const shoulderCap = new THREE.Mesh(new THREE.SphereGeometry(0.225, 22, 14), robeMat);
+    shoulderCap.scale.set(1.0, 0.52, 0.86);
+    shoulderCap.position.y = 0.35;
+    shoulderCap.castShadow = true;
+    body.add(shoulderCap);
+
+    // 단아한 흰 동정(깃) 포인트
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 10, 20), collarMat);
+    collar.rotation.x = Math.PI / 2 - 0.14;
+    collar.position.set(0, 0.43, 0.02);
+    body.add(collar);
+
     upperBodyPivot.add(body);
 
-    // 2. 머리 (피벗 y=0.50 기준 +0.88 -> 1.38)
-    const headGeo = new THREE.SphereGeometry(0.25, 24, 24);
+    // 2. 머리 (군더더기 돌출 없이 맑고 매끈한 둥근 머리)
+    const headGeo = new THREE.SphereGeometry(0.23, 24, 24);
     const head = new THREE.Mesh(headGeo, skinMat);
+    head.scale.set(0.96, 1.04, 0.96);
     head.position.y = 0.88;
     head.castShadow = true;
     upperBodyPivot.add(head);
 
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), skinMat);
-    nose.position.set(0, 0.87, 0.25);
-    upperBodyPivot.add(nose);
-
-    [-0.24, 0.24].forEach(ex => {
-      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), skinMat);
-      ear.position.set(ex, 0.88, 0);
-      upperBodyPivot.add(ear);
-    });
-
-    // 3. [요청 반영] 손이 거꾸로 되지 않고 하늘/턱 쪽으로 단정히 위를 향하도록 바로 세운 하얀 합장 손
+    // 3. 단정히 모은 소매와 위를 향한 하얀 합장 손
     const gasshoGroup = new THREE.Group();
     gasshoGroup.position.set(0, 0.35, 0.22); // 가슴 앞 위치
 
-    // 양팔: [요청 반영: 소매 부분을 아래로 자연스럽게 내려 단아하게 늘어뜨린 승복 배흘림 소매]
-    [-0.14, 0.14].forEach((sx, idx) => {
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.092, 0.045, 0.22, 14), robeMat);
-      arm.position.set(sx, -0.04, 0.03); // [요청 반영] 소매를 아래로 내려 단정하게 정돈
-      arm.rotation.z = idx === 0 ? -0.62 : 0.62;
-      arm.rotation.x = 0.38; // [요청 반영] 손을 향해 자연스럽게 벌어지도록 각도 회전
+    [-0.12, 0.12].forEach((sx, idx) => {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.042, 0.22, 14), robeMat);
+      arm.position.set(sx, -0.04, 0.01);
+      arm.rotation.z = idx === 0 ? -0.52 : 0.52;
+      arm.rotation.x = 0.35;
       gasshoGroup.add(arm);
     });
 
-    // 위쪽(+Y)을 향해 모아진 하얀 손 (손가락 끝이 위를 향함!)
     const whiteHandMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
     const handsPair = new THREE.Group();
-    handsPair.position.set(0, 0.06, 0.08); // 소매가 내려간 위치에 맞추어 손도 조화롭게 안착
+    handsPair.position.set(0, 0.05, 0.07);
 
-    // 왼손 (손가락 끝이 위를 향함)
-    const leftHand = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.038, 0.15, 12), whiteHandMat);
+    const leftHand = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.14, 12), whiteHandMat);
     leftHand.scale.set(0.55, 1.0, 1.2);
-    leftHand.position.set(-0.016, 0.04, 0);
+    leftHand.position.set(-0.015, 0.04, 0);
     leftHand.rotation.z = -0.08;
     leftHand.rotation.x = -0.15;
     handsPair.add(leftHand);
 
-    // 오른손
-    const rightHand = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.038, 0.15, 12), whiteHandMat);
+    const rightHand = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.14, 12), whiteHandMat);
     rightHand.scale.set(0.55, 1.0, 1.2);
-    rightHand.position.set(0.016, 0.04, 0);
+    rightHand.position.set(0.015, 0.04, 0);
     rightHand.rotation.z = 0.08;
     rightHand.rotation.x = -0.15;
     handsPair.add(rightHand);
 
-    // 모아진 둥근 손끝 (위쪽 끝부분)
-    const fingertips = new THREE.Mesh(new THREE.SphereGeometry(0.032, 12, 12), whiteHandMat);
+    const fingertips = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 12), whiteHandMat);
     fingertips.scale.set(0.7, 1.2, 0.85);
-    fingertips.position.set(0, 0.11, -0.01);
+    fingertips.position.set(0, 0.10, -0.01);
     handsPair.add(fingertips);
 
-    // 손목 연결 구 (아래쪽 받침)
-    const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 10), whiteHandMat);
+    const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 10), whiteHandMat);
     wrist.position.set(0, -0.03, 0.01);
     handsPair.add(wrist);
 
@@ -214,29 +216,29 @@ class Bomunsa3D {
     upperBodyPivot.add(gasshoGroup);
     this.characterGroup.add(upperBodyPivot);
 
-    // 4. 양다리와 흰 고무신
-    const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.42, 12);
+    // 4. 양다리 (단정한 직선형 바짓단 아래 고무신)
+    const legGeo = new THREE.CylinderGeometry(0.082, 0.078, 0.42, 14);
     legGeo.translate(0, -0.18, 0);
 
     const leftLegPivot = new THREE.Group();
-    leftLegPivot.position.set(-0.13, 0.46, 0);
+    leftLegPivot.position.set(-0.12, 0.46, 0);
     const leftLeg = new THREE.Mesh(legGeo, robeMat);
     leftLeg.castShadow = true;
     leftLegPivot.add(leftLeg);
-    const leftShoe = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), shoeMat);
-    leftShoe.scale.set(0.9, 0.65, 1.4);
-    leftShoe.position.set(0, -0.38, 0.05);
+    const leftShoe = new THREE.Mesh(new THREE.SphereGeometry(0.082, 12, 12), shoeMat);
+    leftShoe.scale.set(0.92, 0.62, 1.32);
+    leftShoe.position.set(0, -0.38, 0.035);
     leftLegPivot.add(leftShoe);
     this.characterGroup.add(leftLegPivot);
 
     const rightLegPivot = new THREE.Group();
-    rightLegPivot.position.set(0.13, 0.46, 0);
+    rightLegPivot.position.set(0.12, 0.46, 0);
     const rightLeg = new THREE.Mesh(legGeo, robeMat);
     rightLeg.castShadow = true;
     rightLegPivot.add(rightLeg);
-    const rightShoe = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), shoeMat);
-    rightShoe.scale.set(0.9, 0.65, 1.4);
-    rightShoe.position.set(0, -0.38, 0.05);
+    const rightShoe = new THREE.Mesh(new THREE.SphereGeometry(0.082, 12, 12), shoeMat);
+    rightShoe.scale.set(0.92, 0.62, 1.32);
+    rightShoe.position.set(0, -0.38, 0.035);
     rightLegPivot.add(rightShoe);
     this.characterGroup.add(rightLegPivot);
 
@@ -360,145 +362,735 @@ class Bomunsa3D {
     this.scene.add(group);
   }
 
-  createHanokBuilding({ width, depth, height, roofColor = 0x2e3b32, woodColor = 0x703c23, dancheongColor = 0x1f6650, doorCount = 3 }) {
+  // [한국 전통 사찰 건축 고해상도 절차적 텍스처 세트 (꽃살문·연꽃 궁판·단청·서까래·기와·벽돌·판문)]
+  getKoreanTempleTextures() {
+    if (this._koreanTexCache) return this._koreanTexCache;
+
+    // 1. 사진 3 기반 청자/쑥빛 꽃살문 + 하단 연꽃 문양(궁판) 텍스처 (한 칸 2짝 대문 기준)
+    const doorCanvas = document.createElement('canvas');
+    doorCanvas.width = 512;
+    doorCanvas.height = 1024;
+    const dctx = doorCanvas.getContext('2d');
+
+    // 외곽 문틀 목재 (차분한 쑥빛 청록)
+    dctx.fillStyle = '#587e5e';
+    dctx.fillRect(0, 0, 512, 1024);
+
+    // 좌우 문짝 2개 렌더링
+    [10, 260].forEach((lx) => {
+      const lw = 242;
+      // 창호지 안쪽 바탕 (상단 격자 영역)
+      const latticeY = 26;
+      const latticeH = 656;
+      dctx.fillStyle = '#f3f1e7';
+      dctx.fillRect(lx + 18, latticeY + 18, lw - 36, latticeH - 36);
+
+      // 문짝 바깥 쑥빛 프레임
+      dctx.strokeStyle = '#6b9472';
+      dctx.lineWidth = 18;
+      dctx.strokeRect(lx + 9, 14, lw - 18, 996);
+      dctx.strokeStyle = '#3b5840';
+      dctx.lineWidth = 3;
+      dctx.strokeRect(lx + 18, latticeY + 18, lw - 36, latticeH - 36);
+
+      // 정교한 한국 전통 띠살·우물살 격자
+      dctx.strokeStyle = '#5c8362';
+      dctx.lineWidth = 5;
+      const cols = 6;
+      const innerX = lx + 18;
+      const innerW = lw - 36;
+      const innerY = latticeY + 18;
+      const innerH = latticeH - 36;
+      for (let c = 1; c < cols; c++) {
+        const vx = innerX + (innerW / cols) * c;
+        dctx.beginPath();
+        dctx.moveTo(vx, innerY);
+        dctx.lineTo(vx, innerY + innerH);
+        dctx.stroke();
+      }
+      // 상·중·하 정자살 교차 띠
+      const hRows = [0.05, 0.10, 0.15, 0.20, 0.36, 0.50, 0.64, 0.80, 0.85, 0.90, 0.95];
+      hRows.forEach(r => {
+        const hy = innerY + innerH * r;
+        dctx.beginPath();
+        dctx.moveTo(innerX, hy);
+        dctx.lineTo(innerX + innerW, hy);
+        dctx.stroke();
+      });
+
+      // 작은 쇠 문고리 및 장식 못
+      dctx.fillStyle = '#252624';
+      const pullX = lx < 100 ? lx + lw - 30 : lx + 30;
+      dctx.beginPath();
+      dctx.arc(pullX, latticeY + latticeH * 0.72, 10, 0, Math.PI * 2);
+      dctx.strokeStyle = '#1d1e1c';
+      dctx.lineWidth = 4;
+      dctx.stroke();
+      dctx.beginPath();
+      dctx.arc(pullX, latticeY + latticeH * 0.60, 6, 0, Math.PI * 2);
+      dctx.fill();
+
+      // 하단 궁판(목판) 배경 + 전통 부조 연꽃(연화문) 채색
+      const panelX = lx + 20;
+      const panelY = 708;
+      const panelW = lw - 40;
+      const panelH = 266;
+      dctx.fillStyle = '#4e7254';
+      dctx.fillRect(panelX, panelY, panelW, panelH);
+      dctx.strokeStyle = '#7ba381';
+      dctx.lineWidth = 6;
+      dctx.strokeRect(panelX + 8, panelY + 8, panelW - 16, panelH - 16);
+
+      // 연꽃 모티브 (사진 3 하단 연꽃 조각 참고: 주홍/분홍/청자빛 연화)
+      const fcx = panelX + panelW / 2;
+      const fcy = panelY + panelH * 0.54;
+      // 연잎 줄기와 잎
+      dctx.strokeStyle = '#335038';
+      dctx.lineWidth = 5;
+      dctx.beginPath();
+      dctx.moveTo(fcx, panelY + panelH - 22);
+      dctx.quadraticCurveTo(fcx - 10, fcy + 40, fcx, fcy + 10);
+      dctx.stroke();
+
+      dctx.fillStyle = '#6da078';
+      dctx.beginPath();
+      dctx.ellipse(fcx - 38, fcy + 42, 26, 12, -0.35, 0, Math.PI * 2);
+      dctx.ellipse(fcx + 38, fcy + 42, 26, 12, 0.35, 0, Math.PI * 2);
+      dctx.fill();
+
+      // 활짝 핀 연꽃잎
+      const isLeftLeaf = lx < 100;
+      const petalMain = isLeftLeaf ? '#e3906e' : '#7b8fc7';
+      const petalSoft = isLeftLeaf ? '#f4c6a8' : '#b7c7eb';
+      [-0.55, -0.28, 0.28, 0.55, 0].forEach((ang, idx) => {
+        dctx.save();
+        dctx.translate(fcx, fcy + 8);
+        dctx.rotate(ang);
+        dctx.fillStyle = idx === 4 ? petalSoft : petalMain;
+        dctx.beginPath();
+        dctx.ellipse(0, -24, 15, 32, 0, 0, Math.PI * 2);
+        dctx.fill();
+        dctx.strokeStyle = '#3b4f3e';
+        dctx.lineWidth = 2;
+        dctx.stroke();
+        dctx.restore();
+      });
+      dctx.fillStyle = '#e7c66c';
+      dctx.beginPath();
+      dctx.arc(fcx, fcy - 6, 10, 0, Math.PI * 2);
+      dctx.fill();
+    });
+
+    const doorTex = new THREE.CanvasTexture(doorCanvas);
+    doorTex.anisotropy = 4;
+
+    // 2. 사진 3 기반 한국 전통 모로단청(인방·포벽) 텍스처
+    const danCanvas = document.createElement('canvas');
+    danCanvas.width = 1024;
+    danCanvas.height = 256;
+    const dct = danCanvas.getContext('2d');
+    dct.fillStyle = '#4e7960'; // 뇌록색 바탕
+    dct.fillRect(0, 0, 1024, 256);
+
+    // 상하 주홍/황토 경계 띠
+    dct.fillStyle = '#9b3a2e';
+    dct.fillRect(0, 0, 1024, 26);
+    dct.fillRect(0, 230, 1024, 26);
+    dct.fillStyle = '#e2b857';
+    dct.fillRect(0, 26, 1024, 8);
+    dct.fillRect(0, 222, 1024, 8);
+
+    // 반복되는 단청 머리초·금문 패턴
+    for (let x = 64; x < 1024; x += 256) {
+      // 파랑·초록·주홍·노랑 색실 아치 띠
+      const colors = ['#2b5486', '#3d8f75', '#d9763c', '#c1382d', '#e8c468'];
+      colors.forEach((col, i) => {
+        dct.strokeStyle = col;
+        dct.lineWidth = 10;
+        dct.beginPath();
+        dct.arc(x, 128, 72 - i * 11, 0, Math.PI * 2);
+        dct.stroke();
+      });
+      // 중심 연화문
+      dct.fillStyle = '#f2e8cf';
+      dct.beginPath();
+      dct.arc(x, 128, 16, 0, Math.PI * 2);
+      dct.fill();
+      dct.fillStyle = '#b9362b';
+      dct.beginPath();
+      dct.arc(x, 128, 8, 0, Math.PI * 2);
+      dct.fill();
+
+      // 중간 바 격자
+      dct.fillStyle = '#2d4d3e';
+      dct.fillRect(x + 92, 46, 72, 164);
+      dct.strokeStyle = '#9bd1ae';
+      dct.lineWidth = 4;
+      dct.strokeRect(x + 98, 54, 60, 148);
+    }
+    const dancheongTex = new THREE.CanvasTexture(danCanvas);
+    dancheongTex.wrapS = THREE.RepeatWrapping;
+    dancheongTex.anisotropy = 4;
+
+    // 3. 서까래 끝 마구리(연화 꽃무늬) 텍스처
+    const rafCanvas = document.createElement('canvas');
+    rafCanvas.width = 128;
+    rafCanvas.height = 128;
+    const rctx = rafCanvas.getContext('2d');
+    rctx.fillStyle = '#3a6650';
+    rctx.fillRect(0, 0, 128, 128);
+    rctx.fillStyle = '#c43e2d';
+    rctx.beginPath();
+    rctx.arc(64, 64, 58, 0, Math.PI * 2);
+    rctx.fill();
+    rctx.fillStyle = '#316a56';
+    rctx.beginPath();
+    rctx.arc(64, 64, 46, 0, Math.PI * 2);
+    rctx.fill();
+    for (let i = 0; i < 8; i++) {
+      rctx.save();
+      rctx.translate(64, 64);
+      rctx.rotate((i * Math.PI) / 4);
+      rctx.fillStyle = '#f4ebd4';
+      rctx.beginPath();
+      rctx.ellipse(0, -24, 9, 17, 0, 0, Math.PI * 2);
+      rctx.fill();
+      rctx.restore();
+    }
+    rctx.fillStyle = '#e8b948';
+    rctx.beginPath();
+    rctx.arc(64, 64, 13, 0, Math.PI * 2);
+    rctx.fill();
+    const rafterCapTex = new THREE.CanvasTexture(rafCanvas);
+
+    // 4. 한국 전통 기와골 텍스처
+    const giwaCanvas = document.createElement('canvas');
+    giwaCanvas.width = 512;
+    giwaCanvas.height = 512;
+    const gctx = giwaCanvas.getContext('2d');
+    gctx.fillStyle = '#343940';
+    gctx.fillRect(0, 0, 512, 512);
+    const cols = 16;
+    const cw = 512 / cols;
+    for (let c = 0; c < cols; c++) {
+      const gx = c * cw;
+      const grad = gctx.createLinearGradient(gx, 0, gx + cw, 0);
+      grad.addColorStop(0, '#22262b');
+      grad.addColorStop(0.35, '#464d56');
+      grad.addColorStop(0.65, '#3b4149');
+      grad.addColorStop(1, '#202429');
+      gctx.fillStyle = grad;
+      gctx.fillRect(gx, 0, cw, 512);
+    }
+    gctx.strokeStyle = 'rgba(20, 22, 26, 0.45)';
+    gctx.lineWidth = 2;
+    for (let y = 32; y < 512; y += 32) {
+      gctx.beginPath();
+      gctx.moveTo(0, y);
+      gctx.lineTo(512, y);
+      gctx.stroke();
+    }
+    const giwaTex = new THREE.CanvasTexture(giwaCanvas);
+    giwaTex.wrapS = THREE.RepeatWrapping;
+    giwaTex.wrapT = THREE.RepeatWrapping;
+    giwaTex.repeat.set(3, 2);
+
+    // 5. 사진 2 기반 붉은 적벽돌 텍스처
+    const brickCanvas = document.createElement('canvas');
+    brickCanvas.width = 512;
+    brickCanvas.height = 512;
+    const bctx = brickCanvas.getContext('2d');
+    bctx.fillStyle = '#c8bfb5'; // 줄눈 회색 모르타르
+    bctx.fillRect(0, 0, 512, 512);
+    const bRows = 12;
+    const bCols = 6;
+    const bh = 512 / bRows;
+    const bw = 512 / bCols;
+    const shades = ['#925140', '#834435', '#9d5b49', '#773d30', '#a6624f'];
+    for (let r = 0; r < bRows; r++) {
+      const offset = (r % 2) * (bw * 0.5);
+      for (let c = -1; c <= bCols; c++) {
+        bctx.fillStyle = shades[(r * 7 + c * 3 + 10) % shades.length];
+        bctx.fillRect(c * bw + offset + 3, r * bh + 3, bw - 6, bh - 6);
+      }
+    }
+    const brickTex = new THREE.CanvasTexture(brickCanvas);
+    brickTex.wrapS = THREE.RepeatWrapping;
+    brickTex.wrapT = THREE.RepeatWrapping;
+
+    // 6. 사진 2 기반 대문 판문(세로 나무 판자 + 철제 경첩 + 광두정 못 + 문고리) 텍스처
+    const makeGateLeafTex = (isRight) => {
+      const gc = document.createElement('canvas');
+      gc.width = 512;
+      gc.height = 1024;
+      const ctx = gc.getContext('2d');
+
+      // 3개의 세로 원목 널빤지
+      const plankCols = ['#84431a', '#914d1f', '#783c16'];
+      for (let p = 0; p < 3; p++) {
+        const px = p * (512 / 3);
+        const pw = 512 / 3;
+        const pgrad = ctx.createLinearGradient(px, 0, px + pw, 0);
+        pgrad.addColorStop(0, '#6a3312');
+        pgrad.addColorStop(0.25, plankCols[p]);
+        pgrad.addColorStop(0.8, '#9b5524');
+        pgrad.addColorStop(1, '#58290d');
+        ctx.fillStyle = pgrad;
+        ctx.fillRect(px, 0, pw, 1024);
+
+        // 결 라인
+        ctx.strokeStyle = 'rgba(42, 18, 6, 0.25)';
+        ctx.lineWidth = 2;
+        for (let k = 12; k < pw - 8; k += 18) {
+          ctx.beginPath();
+          ctx.moveTo(px + k, 0);
+          ctx.bezierCurveTo(px + k + 4, 340, px + k - 4, 680, px + k, 1024);
+          ctx.stroke();
+        }
+      }
+      // 판자 사이 틈새 어두운 선
+      ctx.fillStyle = '#2d1507';
+      ctx.fillRect(169, 0, 5, 1024);
+      ctx.fillRect(339, 0, 5, 1024);
+
+      // 상하 철제 L자 경첩(바깥쪽 가장자리에 위치)
+      ctx.fillStyle = '#222528';
+      if (!isRight) {
+        ctx.fillRect(0, 72, 165, 42);
+        ctx.fillRect(0, 72, 42, 130);
+        ctx.fillRect(0, 860, 165, 42);
+        ctx.fillRect(0, 772, 42, 130);
+      } else {
+        ctx.fillRect(512 - 165, 72, 165, 42);
+        ctx.fillRect(512 - 42, 72, 42, 130);
+        ctx.fillRect(512 - 165, 860, 165, 42);
+        ctx.fillRect(512 - 42, 772, 42, 130);
+      }
+
+      // 가로 3줄 철제 광두정(마름모 못 장식)
+      [182, 466, 800].forEach(ry => {
+        for (let sx = 38; sx <= 474; sx += 72) {
+          ctx.save();
+          ctx.translate(sx, ry);
+          ctx.rotate(Math.PI / 4);
+          ctx.fillStyle = '#1b1d1f';
+          ctx.fillRect(-10, -10, 20, 20);
+          ctx.fillStyle = '#4c5258';
+          ctx.fillRect(-4, -4, 8, 8);
+          ctx.restore();
+        }
+      });
+
+      // 중앙 문고리 원형 철판
+      const ringX = isRight ? 42 : 512 - 42;
+      const ringY = 540;
+      ctx.fillStyle = '#1f2225';
+      ctx.beginPath();
+      ctx.arc(ringX, ringY, 64, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#474c52';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(ringX, ringY + 12, 34, 0, Math.PI * 2);
+      ctx.stroke();
+
+      return new THREE.CanvasTexture(gc);
+    };
+
+    this._koreanTexCache = {
+      doorTex,
+      dancheongTex,
+      rafterCapTex,
+      giwaTex,
+      brickTex,
+      gateLeftTex: makeGateLeafTex(false),
+      gateRightTex: makeGateLeafTex(true)
+    };
+    return this._koreanTexCache;
+  }
+
+  // [한국 전통 처마 곡선(앙곡·안허리곡)을 구현한 기와 지붕 빌더]
+  createKoreanCurvedRoof(group, { width, depth, baseY, ridgeHeight = 2.0, roofColor = 0x363b42, isStone = false, texSet }) {
+    const eaveW = width + 2.5;
+    const eaveD = depth + 2.6;
+    const ridgeHalfW = Math.max(width * 0.30, eaveW * 0.5 - 1.75);
+    const halfW = eaveW * 0.5;
+    const halfD = eaveD * 0.5;
+
+    const uSteps = 16;
+    const vSteps = 10;
+    const roofMat = new THREE.MeshStandardMaterial({
+      map: isStone ? null : texSet.giwaTex,
+      color: roofColor,
+      roughness: isStone ? 0.85 : 0.72,
+      side: THREE.DoubleSide
+    });
+
+    // 사면 경사면 생성 함수 (front: +1, back: -1)
+    const buildMainSlope = (zSign) => {
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+      for (let j = 0; j <= vSteps; j++) {
+        const v = j / vSteps; // 0: 용마루, 1: 처마 끝
+        const slopeDrop = ridgeHeight * (1 - Math.pow(v, 0.72));
+        for (let i = 0; i <= uSteps; i++) {
+          const u = (i / uSteps) * 2 - 1; // -1 .. +1
+          const absU = Math.abs(u);
+          const xAtRow = u * (ridgeHalfW * (1 - v) + halfW * (1 + 0.05 * v) * v);
+          const zAtRow = zSign * (v * halfD * (1 + 0.05 * Math.pow(absU, 2.2) * v));
+          // 처마 네 귀퉁이 추녀 들림(앙곡)
+          const tipLift = (0.38 * Math.pow(absU, 2.0) * Math.pow(v, 1.4)) - (0.08 * Math.sin(v * Math.PI) * (1 - absU * 0.4));
+          positions.push(xAtRow, baseY + slopeDrop + tipLift, zAtRow);
+          uvs.push(i / uSteps, v);
+        }
+      }
+      for (let j = 0; j < vSteps; j++) {
+        for (let i = 0; i < uSteps; i++) {
+          const a = j * (uSteps + 1) + i;
+          const b = a + 1;
+          const c = (j + 1) * (uSteps + 1) + i;
+          const d = c + 1;
+          indices.push(a, c, b, b, c, d);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, roofMat);
+      mesh.castShadow = true;
+      group.add(mesh);
+    };
+
+    // 좌우 측면 지붕 경사면 (팔작/우진각 지붕 측면부)
+    const buildSideSlope = (xSign) => {
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+      for (let j = 0; j <= vSteps; j++) {
+        const v = j / vSteps;
+        const slopeDrop = ridgeHeight * (1 - Math.pow(v, 0.72));
+        for (let i = 0; i <= 8; i++) {
+          const w = (i / 8) * 2 - 1; // -1(뒤) .. +1(앞)
+          const zAtRow = w * (v * halfD * 1.05);
+          const xAtRow = xSign * (ridgeHalfW * (1 - v) + halfW * 1.05 * v);
+          const tipLift = 0.38 * Math.pow(Math.abs(w), 1.6) * Math.pow(v, 1.4);
+          positions.push(xAtRow, baseY + slopeDrop + tipLift, zAtRow);
+          uvs.push(i / 8, v);
+        }
+      }
+      for (let j = 0; j < vSteps; j++) {
+        for (let i = 0; i < 8; i++) {
+          const a = j * 9 + i;
+          const b = a + 1;
+          const c = (j + 1) * 9 + i;
+          const d = c + 1;
+          indices.push(a, c, b, b, c, d);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, roofMat);
+      mesh.castShadow = true;
+      group.add(mesh);
+    };
+
+    buildMainSlope(1);
+    buildMainSlope(-1);
+    buildSideSlope(1);
+    buildSideSlope(-1);
+
+    // 용마루(지붕 꼭대기 기와 능선) + 양 끝 장식(치미/취두 느낌)
+    const ridgeMat = new THREE.MeshStandardMaterial({ color: isStone ? 0x3b3f44 : 0x22262c, roughness: 0.7 });
+    const ridgeBeam = new THREE.Mesh(new THREE.BoxGeometry(ridgeHalfW * 2 + 0.24, 0.28, 0.32), ridgeMat);
+    ridgeBeam.position.set(0, baseY + ridgeHeight + 0.08, 0);
+    group.add(ridgeBeam);
+
+    [-ridgeHalfW - 0.08, ridgeHalfW + 0.08].forEach(rx => {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.38, 8), ridgeMat);
+      cap.position.set(rx, baseY + ridgeHeight + 0.22, 0);
+      cap.rotation.z = rx < 0 ? 0.22 : -0.22;
+      group.add(cap);
+    });
+
+    // 어두운 처마 밑 소핏(하부 닫힘)
+    const soffit = new THREE.Mesh(
+      new THREE.BoxGeometry(eaveW - 0.5, 0.14, eaveD - 0.5),
+      new THREE.MeshStandardMaterial({ color: isStone ? 0x45494e : 0x3f2419, roughness: 0.85 })
+    );
+    soffit.position.y = baseY + 0.06;
+    group.add(soffit);
+  }
+
+  createHanokBuilding({ width, depth, height, roofColor = 0x353b42, woodColor = 0x612b23, doorCount = 3 }) {
     const group = new THREE.Group();
-    const baseGeo = new THREE.BoxGeometry(width + 1.2, 0.8, depth + 1.2);
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0xb5b2ab, roughness: 0.9 });
-    const base = new THREE.Mesh(baseGeo, baseMat);
+    const texSet = this.getKoreanTempleTextures();
+
+    // 1. 화강암 기단부 + 정면 돌계단
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0xb9b6ae, roughness: 0.9 });
+    const base = new THREE.Mesh(new THREE.BoxGeometry(width + 1.4, 0.8, depth + 1.4), baseMat);
     base.position.y = 0.4;
     group.add(base);
 
-    const wallGeo = new THREE.BoxGeometry(width - 0.2, height, depth - 0.2);
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0xf4eedb, roughness: 0.85 });
-    const wall = new THREE.Mesh(wallGeo, wallMat);
+    // 앞쪽 2단 돌계단 (현관 중앙 돌출)
+    const stepW = Math.min(width * 0.55, 5.2);
+    const step1 = new THREE.Mesh(new THREE.BoxGeometry(stepW, 0.38, 0.8), baseMat);
+    step1.position.set(0, 0.19, depth / 2 + 0.95);
+    group.add(step1);
+    const step2 = new THREE.Mesh(new THREE.BoxGeometry(stepW - 0.4, 0.4, 0.5), baseMat);
+    step2.position.set(0, 0.58, depth / 2 + 0.72);
+    group.add(step2);
+
+    // 2. 외벽 (고즈넉한 전통 한옥 회벽 + 붉은 인방)
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(width - 0.2, height, depth - 0.2),
+      new THREE.MeshStandardMaterial({ color: 0xd9cfc0, roughness: 0.88 })
+    );
     wall.position.y = 0.8 + height / 2;
     group.add(wall);
 
-    const pillarMat = new THREE.MeshStandardMaterial({ color: woodColor, roughness: 0.7 });
-    const plinthMat = new THREE.MeshStandardMaterial({ color: 0x98948d, roughness: 0.9 });
+    // 3. 자줏빛 마룬 기둥(배흘림 느낌) + 황토색 문선 테두리 + 주춧돌
+    const pillarMat = new THREE.MeshStandardMaterial({ color: woodColor, roughness: 0.68 });
+    const ochreTrimMat = new THREE.MeshStandardMaterial({ color: 0xce9667, roughness: 0.75 });
+    const plinthMat = new THREE.MeshStandardMaterial({ color: 0x9b978f, roughness: 0.9 });
     const pRadius = 0.22;
     const pHeight = height;
 
     const colCount = doorCount + 1;
     const colStep = width / (colCount - 1);
     const frontColX = [];
-    for (let c = 0; c < colCount; c++) frontColX.push(-width/2 + c * colStep);
+    for (let c = 0; c < colCount; c++) frontColX.push(-width / 2 + c * colStep);
 
     frontColX.forEach(px => {
-      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.2, 8), plinthMat);
-      plinth.position.set(px, 0.9, depth/2 + 0.05);
+      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.36, 0.2, 10), plinthMat);
+      plinth.position.set(px, 0.9, depth / 2 + 0.04);
       group.add(plinth);
 
-      const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(pRadius, pRadius, pHeight, 10), pillarMat);
-      pMesh.position.set(px, 0.8 + pHeight/2, depth/2 + 0.05);
+      const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(pRadius * 0.92, pRadius, pHeight, 12), pillarMat);
+      pMesh.position.set(px, 0.8 + pHeight / 2, depth / 2 + 0.04);
       pMesh.castShadow = true;
       group.add(pMesh);
+
+      // 기둥 상단 단청 칼라 링(머리초)
+      const collarRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(pRadius + 0.015, pRadius + 0.015, 0.45, 12),
+        new THREE.MeshStandardMaterial({ map: texSet.dancheongTex, roughness: 0.6 })
+      );
+      collarRing.position.set(px, 0.8 + pHeight - 0.26, depth / 2 + 0.04);
+      group.add(collarRing);
     });
 
-    [[-width/2, -depth/2], [width/2, -depth/2], [0, -depth/2]].forEach(([px, pz]) => {
+    [[-width / 2, -depth / 2], [width / 2, -depth / 2], [0, -depth / 2]].forEach(([px, pz]) => {
       const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(pRadius, pRadius, pHeight, 10), pillarMat);
-      pMesh.position.set(px, 0.8 + pHeight/2, pz);
+      pMesh.position.set(px, 0.8 + pHeight / 2, pz);
       group.add(pMesh);
     });
 
-    const doorFrameMat = new THREE.MeshStandardMaterial({ color: woodColor, roughness: 0.75 });
-    const doorPaperMat = new THREE.MeshStandardMaterial({ color: 0xfffcf5, roughness: 0.5 });
-    const gridMat = new THREE.MeshStandardMaterial({ color: 0x542c19, roughness: 0.8 });
+    // 4. 사진 3 스타일 쑥빛 한국 전통 꽃살문 + 하단 연꽃 궁판 + 상단 붉은 창방(문틀)
+    const doorMat = new THREE.MeshStandardMaterial({
+      map: texSet.doorTex,
+      roughness: 0.62,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
+    const lintelHeight = height * 0.22;
+    const doorH = height * 0.72;
+
+    // 정면 가로 문인방 (문과 현판 사이)
+    const frontBeam = new THREE.Mesh(new THREE.BoxGeometry(width + 0.2, 0.16, 0.22), pillarMat);
+    frontBeam.position.set(0, 0.8 + doorH + 0.14, depth / 2 + 0.02);
+    group.add(frontBeam);
 
     for (let d = 0; d < doorCount; d++) {
-      const doorCenterX = (frontColX[d] + frontColX[d+1]) / 2;
-      const doorW = colStep * 0.78;
-      const doorH = height * 0.72;
+      const doorCenterX = (frontColX[d] + frontColX[d + 1]) / 2;
+      const bayW = colStep - pRadius * 1.9;
+      const doorW = bayW * 0.86;
 
-      const doorGroup = new THREE.Group();
-      doorGroup.position.set(doorCenterX, 0.8 + doorH/2 + 0.1, depth/2 + 0.08);
+      // 황토/자주 문선 배접 패널 (사진 3 기둥 옆 연황토 띠 표현)
+      const trimBack = new THREE.Mesh(new THREE.BoxGeometry(bayW, doorH + 0.08, 0.08), ochreTrimMat);
+      trimBack.position.set(doorCenterX, 0.8 + doorH / 2 + 0.06, depth / 2 - 0.02);
+      group.add(trimBack);
 
-      const frameOuter = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.06), doorFrameMat);
-      doorGroup.add(frameOuter);
+      // 꽃살문 + 연꽃 궁판 3D 몸체
+      const doorBox = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.06), pillarMat);
+      doorBox.position.set(doorCenterX, 0.8 + doorH / 2 + 0.06, depth / 2 + 0.03);
+      group.add(doorBox);
 
-      const paperMesh = new THREE.Mesh(new THREE.PlaneGeometry(doorW - 0.16, doorH - 0.2), doorPaperMat);
-      paperMesh.position.z = 0.035;
-      doorGroup.add(paperMesh);
-
-      const hBar = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.16, 0.04, 0.02), gridMat);
-      hBar.position.z = 0.045;
-      doorGroup.add(hBar);
-
-      const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.04, doorH - 0.2, 0.02), gridMat);
-      vBar.position.z = 0.045;
-      doorGroup.add(vBar);
-
-      group.add(doorGroup);
+      const doorFace = new THREE.Mesh(new THREE.PlaneGeometry(doorW - 0.04, doorH - 0.04), doorMat);
+      doorFace.position.set(doorCenterX, 0.8 + doorH / 2 + 0.06, depth / 2 + 0.065);
+      group.add(doorFace);
     }
 
-    const dancheong = new THREE.Mesh(new THREE.BoxGeometry(width + 0.8, 0.45, depth + 0.8), new THREE.MeshStandardMaterial({ color: dancheongColor, roughness: 0.6 }));
-    dancheong.position.y = 0.8 + height + 0.22;
-    group.add(dancheong);
+    // 5. 단청 띠(창방 위 공포대) - 중앙 현판 뒤로 자연스럽게 배치
+    const danMat = new THREE.MeshStandardMaterial({ map: texSet.dancheongTex, roughness: 0.62 });
+    const dancheongFrieze = new THREE.Mesh(new THREE.BoxGeometry(width + 0.6, lintelHeight * 0.75, depth + 0.5), danMat);
+    dancheongFrieze.position.y = 0.8 + height + (lintelHeight * 0.35);
+    group.add(dancheongFrieze);
 
-    const roofBase = new THREE.Mesh(new THREE.BoxGeometry(width + 2.5, 0.5, depth + 2.5), new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 }));
-    roofBase.position.y = 0.8 + height + 0.6;
-    group.add(roofBase);
+    // 6. 사진 3처럼 촘촘히 돌출된 동그란 연화문 서까래(부연) 행렬
+    const rafterCount = Math.max(10, Math.round(width * 2.1));
+    const rafStep = (width + 1.4) / (rafterCount - 1);
+    const rafBodyMat = new THREE.MeshStandardMaterial({ color: 0x3b6752, roughness: 0.7 });
+    const rafCapMat = new THREE.MeshStandardMaterial({ map: texSet.rafterCapTex, roughness: 0.55 });
+    const rafY = 0.8 + height + lintelHeight * 0.72;
+    const rafGeo = new THREE.CylinderGeometry(0.10, 0.11, 1.35, 10);
+    rafGeo.rotateX(Math.PI / 2 + 0.18); // 벽에서 처마 끝 쪽으로 자연스럽게 아래로 경사진 서까래
 
-    const roofTop = new THREE.Mesh(new THREE.ConeGeometry(Math.max(width, depth) * 0.78, 2.2, 4), new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 }));
-    roofTop.position.y = 0.8 + height + 1.85;
-    roofTop.rotation.y = Math.PI / 4;
-    roofTop.scale.set(1.15, 1, 0.85);
-    group.add(roofTop);
+    for (let r = 0; r < rafterCount; r++) {
+      const rx = -(width + 1.4) / 2 + r * rafStep;
+      const raf = new THREE.Mesh(rafGeo, [rafBodyMat, rafCapMat, rafBodyMat]);
+      raf.position.set(rx, rafY, depth / 2 + 0.58);
+      group.add(raf);
+    }
+
+    // 7. 우아한 곡선형 한국 전통 기와지붕 (일본식 사각 피라미드 제거)
+    this.createKoreanCurvedRoof(group, {
+      width,
+      depth,
+      baseY: 0.8 + height + lintelHeight * 0.78,
+      ridgeHeight: Math.max(1.75, width * 0.18),
+      roofColor: 0x3c4148,
+      isStone: false,
+      texSet
+    });
 
     return group;
   }
 
+  // [사용자 요청 반영: 기존 사주문 제거 -> 사진 2처럼 붉은 벽돌 문틀·활짝 열린 나무 판문·철제 문고리·양옆 화분 대문]
   createHojimun(x, y, z) {
     const group = new THREE.Group();
-    const woodColor = 0x8a3622;
-    const dancheongColor = 0x1d5843;
-    const roofColor = 0x283830;
-    const pillarMat = new THREE.MeshStandardMaterial({ color: woodColor, roughness: 0.7 });
-    const plinthMat = new THREE.MeshStandardMaterial({ color: 0x98948d, roughness: 0.9 });
+    const texSet = this.getKoreanTempleTextures();
 
-    // [요청 반영: 번쩍거림(Z-fighting) 및 단차 완전 제거 - 바닥면과 정합]
-    const pillarPositions = [[-2.6, -1.2], [-2.6, 1.2], [2.6, -1.2], [2.6, 1.2]];
-    pillarPositions.forEach(([px, pz]) => {
-      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, 0.14, 8), plinthMat);
-      plinth.position.set(px, 0.07, pz);
-      group.add(plinth);
+    const brickMat = new THREE.MeshStandardMaterial({ map: texSet.brickTex, roughness: 0.88 });
+    const innerBrickMat = new THREE.MeshStandardMaterial({ color: 0x995a49, roughness: 0.85 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0xc2beb6, roughness: 0.9 });
+    const giwaCapMat = new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.75 });
 
-      const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 4.0, 12), pillarMat);
-      pMesh.position.set(px, 2.07, pz);
-      pMesh.castShadow = true;
-      group.add(pMesh);
+    // 1. 입구 화강암 디딤돌 문턱
+    const step = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.18, 1.45), stoneMat);
+    step.position.set(0, 0.09, 0.12);
+    group.add(step);
 
-      this.addObstacle(x + px, z + pz, 0.5);
+    // 2. 붉은 벽돌 문기둥(좌·우) 및 상인방 아치형 벽돌 문틀
+    const pierLeft = new THREE.Mesh(new THREE.BoxGeometry(1.05, 3.85, 0.95), brickMat);
+    pierLeft.position.set(-1.92, 1.925, 0);
+    pierLeft.castShadow = true;
+    group.add(pierLeft);
+
+    const pierRight = new THREE.Mesh(new THREE.BoxGeometry(1.05, 3.85, 0.95), brickMat);
+    pierRight.position.set(1.92, 1.925, 0);
+    pierRight.castShadow = true;
+    group.add(pierRight);
+
+    const topLintel = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.62, 0.96), brickMat);
+    topLintel.position.set(0, 3.68, 0);
+    topLintel.castShadow = true;
+    group.add(topLintel);
+
+    // 문 안쪽 벽돌 몰딩 테두리
+    const innerTop = new THREE.Mesh(new THREE.BoxGeometry(2.84, 0.16, 1.02), innerBrickMat);
+    innerTop.position.set(0, 3.34, 0);
+    group.add(innerTop);
+
+    // 대문 상단 담장 기와 덮개
+    const gateRoof = new THREE.Mesh(new THREE.BoxGeometry(5.15, 0.22, 1.24), giwaCapMat);
+    gateRoof.position.set(0, 4.08, 0);
+    group.add(gateRoof);
+
+    // 좌우로 이어지는 사찰 전통 벽돌 담장 날개 + 기와 얹힘
+    [-4.1, 4.1].forEach(wx => {
+      const wingWall = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.7, 0.62), brickMat);
+      wingWall.position.set(wx, 1.35, -0.08);
+      wingWall.castShadow = true;
+      group.add(wingWall);
+
+      const wingCap = new THREE.Mesh(new THREE.BoxGeometry(3.55, 0.22, 0.88), giwaCapMat);
+      wingCap.position.set(wx, 2.78, -0.08);
+      group.add(wingCap);
     });
 
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.35, 3.2), pillarMat);
-    beam.position.y = 4.22;
-    group.add(beam);
+    // 문 양옆 기둥 및 담장 충돌체 등록 (가운데 열린 대문 통로는 자유롭게 보행 가능)
+    this.addObstacle(x - 2.1, z, 0.85);
+    this.addObstacle(x + 2.1, z, 0.85);
+    this.addObstacle(x - 4.2, z, 1.2);
+    this.addObstacle(x + 4.2, z, 1.2);
 
-    const dancheong = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.4, 4.2), new THREE.MeshStandardMaterial({ color: dancheongColor, roughness: 0.6 }));
-    dancheong.position.y = 4.52;
-    group.add(dancheong);
+    // 3. 안쪽으로 반쯤 열린 묵직한 갈색 나무 대문 2짝 (철제 경첩·광두정·문고리 표현)
+    const doorW = 1.36;
+    const doorH = 3.18;
 
-    const roofBase = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.5, 5.0), new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 }));
-    roofBase.position.y = 4.92;
-    group.add(roofBase);
+    const leftDoorPivot = new THREE.Group();
+    leftDoorPivot.position.set(-1.38, 0.18, 0.05);
+    leftDoorPivot.rotation.y = 0.96; // 안쪽 경내로 반갑게 활짝 열려 있음
+    const leftDoorMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(doorW, doorH, 0.09),
+      new THREE.MeshStandardMaterial({ map: texSet.gateLeftTex, roughness: 0.68 })
+    );
+    leftDoorMesh.position.set(doorW / 2, doorH / 2, 0);
+    leftDoorMesh.castShadow = true;
+    leftDoorPivot.add(leftDoorMesh);
+    group.add(leftDoorPivot);
 
-    const roofTop = new THREE.Mesh(new THREE.ConeGeometry(5.2, 1.8, 4), new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 }));
-    roofTop.position.y = 5.87;
-    roofTop.rotation.y = Math.PI / 4;
-    roofTop.scale.set(1.3, 1, 0.7);
-    group.add(roofTop);
+    const rightDoorPivot = new THREE.Group();
+    rightDoorPivot.position.set(1.38, 0.18, 0.05);
+    rightDoorPivot.rotation.y = -0.78;
+    const rightDoorMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(doorW, doorH, 0.09),
+      new THREE.MeshStandardMaterial({ map: texSet.gateRightTex, roughness: 0.68 })
+    );
+    rightDoorMesh.position.set(-doorW / 2, doorH / 2, 0);
+    rightDoorMesh.castShadow = true;
+    rightDoorPivot.add(rightDoorMesh);
+    group.add(rightDoorPivot);
+
+    // 4. 사진 2 좌우 앞쪽 계단 모서리 화분 (자주빛 사랑초 화분 & 분홍꽃 초록 화분)
+    const potMat = new THREE.MeshStandardMaterial({ color: 0xefede6, roughness: 0.75 });
+    const leftPotGroup = new THREE.Group();
+    leftPotGroup.position.set(-1.68, 0, 0.76);
+    const lPot = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.36, 0.42), potMat);
+    lPot.position.y = 0.18;
+    leftPotGroup.add(lPot);
+    const purpleMat = new THREE.MeshStandardMaterial({ color: 0x623d73, roughness: 0.85 });
+    [[-0.08, 0.42, 0.04], [0.09, 0.44, -0.05], [0, 0.48, 0.08], [-0.04, 0.39, -0.09]].forEach(([fx, fy, fz]) => {
+      const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15, 1), purpleMat);
+      leaf.position.set(fx, fy, fz);
+      leftPotGroup.add(leaf);
+    });
+    group.add(leftPotGroup);
+
+    const rightPotGroup = new THREE.Group();
+    rightPotGroup.position.set(1.68, 0, 0.76);
+    const rPot = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.42), potMat);
+    rPot.position.y = 0.19;
+    rightPotGroup.add(rPot);
+    const sageMat = new THREE.MeshStandardMaterial({ color: 0x5d8558, roughness: 0.85 });
+    const pinkMat = new THREE.MeshStandardMaterial({ color: 0xf1a7bf, roughness: 0.7 });
+    [[-0.08, 0.44, 0.05], [0.08, 0.45, -0.04], [0, 0.50, 0.04]].forEach(([fx, fy, fz]) => {
+      const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.14, 1), sageMat);
+      bush.position.set(fx, fy, fz);
+      rightPotGroup.add(bush);
+    });
+    [[-0.10, 0.49, 0.12], [0.09, 0.54, 0.08], [0.02, 0.46, 0.15]].forEach(([fx, fy, fz]) => {
+      const blossom = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), pinkMat);
+      blossom.position.set(fx, fy, fz);
+      rightPotGroup.add(blossom);
+    });
+    group.add(rightPotGroup);
 
     group.position.set(x, y, z);
     this.scene.add(group);
 
-    // [사용자 요청 반영: 지붕 처마에 가리지 않도록 상단 기둥/인방 높이로 현판을 내리고 앞쪽으로 전진 배치]
-    this.createSignboard(group, '호지문', '四天王門', 0, 3.88, 1.68, 2.4, 0.66);
-
     this.registerInteractable({
       id: 'hojimun',
-      name: '호지문 (사천왕문)',
-      desc: '보문사로 들어서는 첫 관문입니다. 세상의 번뇌를 내려놓고 마음을 청정히 가다듬는 도량의 입구입니다.',
+      name: '사찰 대문 (입구)',
+      desc: '도량으로 들어서는 정겨운 나무 대문입니다. 활짝 열린 문 너머로 고즈넉한 경내와 석탑이 한눈에 펼쳐집니다.',
       position: new THREE.Vector3(x, 0, z + 5.5),
       lookTarget: new THREE.Vector3(x, 1.5, z),
       enterable: false
@@ -562,7 +1154,7 @@ class Bomunsa3D {
     lotusEmblem.position.y = 0.11;
     markerGroup.add(lotusEmblem);
 
-    // [요청 반영: 호지문 및 타 전각과 동일하게 남쪽(z + 6.2)에서 북쪽 석탑을 바라보도록 정면 배치]
+    // [요청 반영: 대문 및 타 전각과 동일하게 남쪽(z + 6.2)에서 북쪽 석탑을 바라보도록 정면 배치]
     // 석굴암(x: -18, z: -13.2)과 10m 가까이 충분히 이격되어 근접 팝업 간섭 완전 해소
     markerGroup.position.set(x, 0, z + 6.2);
     this.scene.add(markerGroup);
@@ -582,7 +1174,7 @@ class Bomunsa3D {
   createDaewoongjeon(x, y, z) {
     const daewoong = this.createHanokBuilding({
       width: 13, depth: 8.5, height: 4.8,
-      roofColor: 0x223528, woodColor: 0x7a301a, dancheongColor: 0x1a6b52, doorCount: 4
+      roofColor: 0x383e45, woodColor: 0x622b23, doorCount: 4
     });
     daewoong.position.set(x, y, z);
     this.scene.add(daewoong);
@@ -597,7 +1189,7 @@ class Bomunsa3D {
     this.registerInteractable({
       id: 'daewoong',
       name: '대웅전 (중심 법당)',
-      desc: '서울시 유형문화재로 지정된 보문사의 중심 법당입니다. 안으로 들어가 은은한 촛불과 목탁 소리 속에 고요한 호흡 명상과 발원을 올릴 수 있습니다.',
+      desc: '도량의 고즈넉한 중심 법당입니다. 안으로 들어가 은은한 촛불과 목탁 소리 속에 고요한 호흡 명상과 발원을 올릴 수 있습니다.',
       position: new THREE.Vector3(x, 0, z + 7.5),
       lookTarget: new THREE.Vector3(x, 2.2, z),
       enterable: true,
@@ -608,7 +1200,7 @@ class Bomunsa3D {
   createSansingak(x, y, z) {
     const sansin = this.createHanokBuilding({
       width: 6, depth: 4.5, height: 3.2,
-      roofColor: 0x334438, woodColor: 0x6e321e, dancheongColor: 0x1f5d47, doorCount: 2
+      roofColor: 0x383e45, woodColor: 0x622b23, doorCount: 2
     });
     sansin.position.set(x, y, z);
     this.scene.add(sansin);
@@ -631,11 +1223,9 @@ class Bomunsa3D {
 
   createSeokguram(x, y, z) {
     const group = new THREE.Group();
+    const texSet = this.getKoreanTempleTextures();
     const stoneWallMat = new THREE.MeshStandardMaterial({ color: 0x8c8f94, roughness: 0.85, flatShading: true });
     const stonePillarMat = new THREE.MeshStandardMaterial({ color: 0x6f7378, roughness: 0.8 });
-    const stoneRoofMat = new THREE.MeshStandardMaterial({ color: 0x4a4e54, roughness: 0.75, flatShading: true });
-    const doorPaperMat = new THREE.MeshStandardMaterial({ color: 0xfbf8ee, roughness: 0.5 });
-    const doorGridMat = new THREE.MeshStandardMaterial({ color: 0x404449, roughness: 0.7 });
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(11, 0.8, 6.5), stoneWallMat);
     base.position.y = 0.4;
@@ -651,43 +1241,43 @@ class Bomunsa3D {
       group.add(pillar);
     });
 
+    const doorMat = new THREE.MeshStandardMaterial({
+      map: texSet.doorTex,
+      roughness: 0.65,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
     [-2.66, 0, 2.66].forEach(dx => {
-      const dGroup = new THREE.Group();
-      dGroup.position.set(dx, 0.8 + 1.6, 2.82);
-      const paper = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.7), doorPaperMat);
-      dGroup.add(paper);
-      const gridH = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.04, 0.02), doorGridMat);
-      gridH.position.z = 0.015;
-      dGroup.add(gridH);
-      const gridV = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.7, 0.02), doorGridMat);
-      gridV.position.z = 0.015;
-      dGroup.add(gridV);
-      group.add(dGroup);
+      const doorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.75), doorMat);
+      doorMesh.position.set(dx, 0.8 + 1.55, 2.83);
+      group.add(doorMesh);
     });
 
-    const roofBase = new THREE.Mesh(new THREE.BoxGeometry(11.8, 0.5, 7.2), stoneRoofMat);
-    roofBase.position.y = 0.8 + 3.8 + 0.25;
-    group.add(roofBase);
-
-    const roofTop = new THREE.Mesh(new THREE.ConeGeometry(7.2, 1.8, 4), stoneRoofMat);
-    roofTop.position.y = 0.8 + 3.8 + 1.35;
-    roofTop.rotation.y = Math.PI / 4;
-    roofTop.scale.set(1.15, 1, 0.85);
-    group.add(roofTop);
+    // 한국 전통 곡선 석조 지붕 적용
+    this.createKoreanCurvedRoof(group, {
+      width: 10.2,
+      depth: 5.8,
+      baseY: 0.8 + 3.8 + 0.12,
+      ridgeHeight: 1.65,
+      roofColor: 0x4c5056,
+      isStone: true,
+      texSet
+    });
 
     group.position.set(x, y, z);
     this.scene.add(group);
 
     // [사용자 요청 반영: 석조 지붕 처마에 가리지 않도록 석문 위 상단 높이로 현판을 내림]
-    this.createSignboard(group, '보문사 석굴암', '石窟法堂', 0, 4.16, 3.05, 2.8, 0.68);
+    this.createSignboard(group, '석굴암', '石窟法堂', 0, 4.16, 3.05, 2.6, 0.68);
 
     this.addObstacle(x, z, 5.0);
     this.addObstacle(x, z + 2.2, 3.6);
 
     this.registerInteractable({
       id: 'seokguram',
-      name: '보문사 석굴암 (석굴법당)',
-      desc: '경주 토함산 석굴암을 모본으로 축조된 국내 유일의 도심 석굴 암자입니다. 회색 석조 법당 안으로 들어가 본존불 앞에서의 깊은 침묵과 싱잉볼 명상을 경험할 수 있습니다.',
+      name: '석굴암 (석굴법당)',
+      desc: '경주 토함산 석굴암을 모본으로 축조된 고요한 도심 석굴 암자입니다. 회색 석조 법당 안으로 들어가 본존불 앞에서의 깊은 침묵과 싱잉볼 명상을 경험할 수 있습니다.',
       position: new THREE.Vector3(x, 0, z + 8.8),
       lookTarget: new THREE.Vector3(x, 2.4, z),
       enterable: true,
@@ -2158,7 +2748,7 @@ class Bomunsa3D {
 
     this.walkWaypoints = [];
 
-    // 석굴암/산신각 등 좌우 날개와 대웅전/호지문/탑 사이를 이동할 때,
+    // 석굴암/산신각 등 좌우 날개와 대웅전/대문/탑 사이를 이동할 때,
     // 대웅전 앞 석등(-4.2, 4.2)과 탑을 피하기 위해 안전한 중앙 안마당(0, -2)을 경유
     const isCrossingCentral = (Math.abs(sx) > 4 && Math.abs(tx) <= 2) ||
                              (Math.abs(sx) <= 2 && Math.abs(tx) > 4) ||
