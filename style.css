@@ -1177,3 +1177,27 @@ body.beomjong-ready .control-hint {
   color: #f6d575;
   text-decoration: underline;
 }
+
+/* 동시접속 인원 표시 배지 */
+.presence-badge {
+  position: fixed;
+  top: 70px;
+  left: 16px;
+  z-index: 12;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(15, 18, 24, 0.72);
+  border: 1px solid rgba(255, 217, 102, 0.35);
+  color: #f5e6b3;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.presence-badge.solo-mode {
+  border-color: rgba(255, 180, 120, 0.45);
+  color: #ffd8b5;
+}

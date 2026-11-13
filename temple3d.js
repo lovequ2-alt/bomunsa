@@ -41,6 +41,13 @@ class Bomunsa3D {
     this.walkAnimTime = 0;
     this.currentCharRotation = Math.PI;
 
+    // 다중 접속 다른 참배객(최대 9명 추가 -> 본인 포함 10명)
+    this.remotePilgrims = new Map();
+    this.remoteRobePalette = [
+      0x74828f, 0x8d8274, 0x6f8076, 0x8b7b84, 0x7a7f8c,
+      0x8e8670, 0x6c7a89, 0x857468, 0x76857d
+    ];
+
     // 범종각 타종 애니메이션 상태
     this.beomjongStriker = null;
     this.beomjongRingTime = 0;
@@ -5139,7 +5146,94 @@ class Bomunsa3D {
       }
     }
 
+    // 실시간 동시접속 참배객 위치/동작 보간 및 내 위치 전송
+    this.updateRemotePilgrims(delta);
+    if (window.templeSync) {
+      window.templeSync.broadcastState({
+        x: this.playerPos.x,
+        z: this.playerPos.z,
+        rotY: this.characterGroup ? this.characterGroup.rotation.y : this.currentCharRotation,
+        isWalking: Boolean(this.isWalking || this.pagodaIsRunning),
+        mode: this.currentMode
+      });
+    }
+
     this.renderer.render(this.scene, this.camera);
+  }
+
+  syncRemotePilgrims(remoteStates) {
+    if (!this.scene) return;
+    // 떠난 참배객 제거
+    Array.from(this.remotePilgrims.keys()).forEach((cid) => {
+      if (!remoteStates || !remoteStates.has(cid)) {
+        const entry = this.remotePilgrims.get(cid);
+        if (entry && entry.group) {
+          this.scene.remove(entry.group);
+        }
+        this.remotePilgrims.delete(cid);
+      }
+    });
+
+    if (!remoteStates) return;
+    remoteStates.forEach((st, cid) => {
+      let entry = this.remotePilgrims.get(cid);
+      if (!entry) {
+        let hash = 0;
+        for (let i = 0; i < cid.length; i++) hash = (hash * 31 + cid.charCodeAt(i)) | 0;
+        const color = this.remoteRobePalette[Math.abs(hash) % this.remoteRobePalette.length];
+        const built = this.buildCuteMonkMesh(color);
+        built.group.position.set(st.x || 0, 0, st.z || 34.0);
+        built.group.rotation.y = st.rotY ?? Math.PI;
+        this.scene.add(built.group);
+        entry = {
+          group: built.group,
+          limbs: built.limbs,
+          targetPos: new THREE.Vector3(st.x || 0, 0, st.z || 34.0),
+          targetRotY: st.rotY ?? Math.PI,
+          isWalking: Boolean(st.isWalking),
+          mode: st.mode || 'outside',
+          walkTime: Math.random() * Math.PI * 2
+        };
+        this.remotePilgrims.set(cid, entry);
+      } else {
+        entry.targetPos.set(st.x || 0, 0, st.z || 34.0);
+        entry.targetRotY = st.rotY ?? Math.PI;
+        entry.isWalking = Boolean(st.isWalking);
+        entry.mode = st.mode || 'outside';
+      }
+    });
+  }
+
+  updateRemotePilgrims(delta) {
+    const showInYard = this.currentMode === 'outside' || this.currentMode === 'pagoda_spin';
+    this.remotePilgrims.forEach((entry) => {
+      const shouldShow = showInYard && entry.mode !== 'inside';
+      entry.group.visible = shouldShow;
+      if (!shouldShow) return;
+
+      entry.group.position.lerp(entry.targetPos, Math.min(1, delta * 8.5));
+      let diff = entry.targetRotY - entry.group.rotation.y;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      entry.group.rotation.y += diff * Math.min(1, delta * 10);
+
+      if (entry.isWalking) {
+        entry.walkTime += delta * 8.0;
+        entry.limbs.leftLeg.rotation.x = Math.sin(entry.walkTime) * 0.42;
+        entry.limbs.rightLeg.rotation.x = -Math.sin(entry.walkTime) * 0.42;
+        if (entry.limbs.upperBody) {
+          entry.limbs.upperBody.position.y = 0.28 + Math.abs(Math.sin(entry.walkTime)) * 0.032;
+          entry.limbs.upperBody.rotation.z = Math.sin(entry.walkTime) * 0.055;
+        }
+      } else {
+        entry.limbs.leftLeg.rotation.set(0, 0, 0);
+        entry.limbs.rightLeg.rotation.set(0, 0, 0);
+        if (entry.limbs.upperBody) {
+          entry.limbs.upperBody.position.set(0, 0.28, 0);
+          entry.limbs.upperBody.rotation.z = 0;
+        }
+      }
+    });
   }
 }
 

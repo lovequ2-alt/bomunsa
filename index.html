@@ -66,6 +66,9 @@
     </div>
   </header>
 
+  <!-- 동시접속 인원 표시 배지 (최대 10명) -->
+  <div id="presence-badge" class="presence-badge">👥 도량 1/10명</div>
+
   <!-- 조작 힌트 배지 -->
   <div id="control-hint" class="control-hint">
     바닥을 탭(터치)하면 걸어갑니다 · 화면을 밀면 둘러봅니다
@@ -198,6 +201,8 @@
   </nav>
 
   <!-- 스크립트 연결 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="sync.js"></script>
   <script src="audio.js"></script>
   <script src="daewoong_asset.js"></script>
   <script src="jijang_asset.js"></script>

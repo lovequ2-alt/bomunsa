@@ -94,37 +94,49 @@ document.addEventListener('DOMContentLoaded', () => {
   // 하얀 연꽃 로고 공통 SVG 마크업
   const WHITE_LOTUS_SVG = '<svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>';
 
-  // 지장전 다중 발원문 목록 및 수정 대상 인덱스
-  let jijangPrayers = [];
-  let editingJijangIndex = null;
-
-  function loadJijangPrayers() {
-    try {
-      const raw = localStorage.getItem('bomunsa_prayers_jijang_list');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {}
-    return [];
-  }
-
-  function saveJijangPrayers(list) {
-    jijangPrayers = list;
-    localStorage.setItem('bomunsa_prayers_jijang_list', JSON.stringify(list));
-    if (app.syncJijangLanterns) {
-      app.syncJijangLanterns(list.length);
+  // 동시접속 인원 배지 및 실시간 동기화 연결
+  const presenceBadge = document.getElementById('presence-badge');
+  if (window.templeSync) {
+    if (presenceBadge && !window.templeSync.isConfigured) {
+      presenceBadge.textContent = '👥 도량 1/10명 (개인 모드)';
     }
+    window.templeSync.onPresenceChange = ({ count, max, isObserverOnly, isConfigured }) => {
+      if (!presenceBadge) return;
+      if (!isConfigured) {
+        presenceBadge.textContent = `👥 도량 1/${max}명 (개인 모드)`;
+        presenceBadge.classList.remove('solo-mode');
+      } else if (isObserverOnly) {
+        presenceBadge.textContent = `👥 도량 ${max}/${max}명 (혼자 참배 모드)`;
+        presenceBadge.classList.add('solo-mode');
+      } else {
+        presenceBadge.textContent = `👥 도량 ${count}/${max}명`;
+        presenceBadge.classList.remove('solo-mode');
+      }
+    };
+    window.templeSync.onRemoteStatesChange = (states) => {
+      if (app.syncRemotePilgrims) {
+        app.syncRemotePilgrims(states);
+      }
+    };
+    window.templeSync.onPrayersUpdated = (locId) => {
+      if (app.activeLocation && (!locId || app.activeLocation.id === locId)) {
+        refreshPrayerBadge(app.activeLocation.id);
+      }
+    };
   }
 
-  function openJijangPrayerModal(editIdx = null) {
-    editingJijangIndex = editIdx;
-    if (editIdx !== null && jijangPrayers[editIdx] !== undefined) {
+  // 지장전 다중 발원문 목록 및 수정 대상 (id 또는 index)
+  let jijangPrayers = [];
+  let editingJijangTarget = null;
+
+  function openJijangPrayerModal(targetItem = null) {
+    editingJijangTarget = targetItem;
+    if (targetItem !== null && targetItem !== undefined) {
       prayerModalTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>지장전 발원문 변경하기</span>`;
       if (prayerModalDesc) {
         prayerModalDesc.textContent = '올려둔 영가등의 극락왕생·업장소멸 발원문 내용을 수정합니다.';
       }
-      prayerInput.value = jijangPrayers[editIdx];
+      prayerInput.value = targetItem.text || '';
       prayerSubmitBtn.innerHTML = `${WHITE_LOTUS_SVG}<span>발원문 수정 완료</span>`;
     } else {
       prayerModalTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>지장전 영가등 올리고 소원빌기</span>`;
@@ -139,80 +151,88 @@ document.addEventListener('DOMContentLoaded', () => {
     prayerInput.focus();
   }
 
-  function refreshPrayerBadge(locationId) {
+  async function refreshPrayerBadge(locationId) {
+    const prayers = window.templeSync
+      ? await window.templeSync.fetchPrayers(locationId)
+      : [];
+
     if (locationId === 'jijang') {
-      jijangPrayers = loadJijangPrayers();
+      jijangPrayers = prayers;
       if (app.syncJijangLanterns) {
-        app.syncJijangLanterns(jijangPrayers.length);
+        app.syncJijangLanterns(prayers.length);
       }
       if (openPrayerText) {
-        openPrayerText.textContent = jijangPrayers.length > 0 ? '영가등 추가하고 소원빌기' : '영가등 올리고 소원빌기';
+        const hasMine = prayers.some(p => p.isMine);
+        openPrayerText.textContent = hasMine ? '영가등 추가하고 소원빌기' : '영가등 올리고 소원빌기';
       }
-      if (jijangPrayers.length > 0) {
+      if (prayers.length > 0) {
         activePrayerBadge.innerHTML = '';
-        jijangPrayers.forEach((pText, idx) => {
+        prayers.forEach((pItem) => {
           const itemDiv = document.createElement('div');
           itemDiv.className = 'prayer-badge-item';
 
           const titleDiv = document.createElement('div');
           titleDiv.className = 'prayer-badge-title';
-          titleDiv.innerHTML = `${WHITE_LOTUS_SVG}<span>영가등 · 극락왕생 소원</span>`;
+          titleDiv.innerHTML = `${WHITE_LOTUS_SVG}<span>${pItem.isMine ? '나의 영가등 · 극락왕생 소원' : '도량 영가등 · 극락왕생 소원'}</span>`;
 
           const textDiv = document.createElement('div');
           textDiv.className = 'prayer-badge-text';
-          textDiv.textContent = pText;
-
-          const actionsDiv = document.createElement('div');
-          actionsDiv.className = 'prayer-badge-actions';
-
-          const editBtn = document.createElement('button');
-          editBtn.type = 'button';
-          editBtn.className = 'prayer-action-btn';
-          editBtn.textContent = '발원문 변경';
-          editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openJijangPrayerModal(idx);
-          });
-
-          const offBtn = document.createElement('button');
-          offBtn.type = 'button';
-          offBtn.className = 'prayer-action-btn turn-off';
-          offBtn.textContent = '등 끄기';
-          offBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const updated = loadJijangPrayers();
-            updated.splice(idx, 1);
-            saveJijangPrayers(updated);
-            refreshPrayerBadge('jijang');
-          });
-
-          actionsDiv.appendChild(editBtn);
-          actionsDiv.appendChild(offBtn);
-
-          // 마우스 진입 시 표시, 마우스가 벗어나면 숨김
-          itemDiv.addEventListener('mouseenter', () => {
-            activePrayerBadge.querySelectorAll('.prayer-badge-item').forEach(el => {
-              if (el !== itemDiv) el.classList.remove('show-actions');
-            });
-            itemDiv.classList.add('show-actions');
-          });
-          itemDiv.addEventListener('mouseleave', () => {
-            itemDiv.classList.remove('show-actions');
-          });
-
-          // 모바일 터치 시 해당 발원문 메뉴 표시 (다른 항목은 닫음)
-          itemDiv.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const willShow = !itemDiv.classList.contains('show-actions');
-            activePrayerBadge.querySelectorAll('.prayer-badge-item').forEach(el => {
-              el.classList.remove('show-actions');
-            });
-            if (willShow) itemDiv.classList.add('show-actions');
-          });
+          textDiv.textContent = pItem.text;
 
           itemDiv.appendChild(titleDiv);
           itemDiv.appendChild(textDiv);
-          itemDiv.appendChild(actionsDiv);
+
+          if (pItem.isMine) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'prayer-badge-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'prayer-action-btn';
+            editBtn.textContent = '발원문 변경';
+            editBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openJijangPrayerModal(pItem);
+            });
+
+            const offBtn = document.createElement('button');
+            offBtn.type = 'button';
+            offBtn.className = 'prayer-action-btn turn-off';
+            offBtn.textContent = '등 끄기';
+            offBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (window.templeSync) {
+                await window.templeSync.deletePrayer('jijang', pItem.id);
+              }
+              refreshPrayerBadge('jijang');
+            });
+
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(offBtn);
+            itemDiv.appendChild(actionsDiv);
+
+            // 마우스 진입 시 표시, 마우스가 벗어나면 숨김
+            itemDiv.addEventListener('mouseenter', () => {
+              activePrayerBadge.querySelectorAll('.prayer-badge-item').forEach(el => {
+                if (el !== itemDiv) el.classList.remove('show-actions');
+              });
+              itemDiv.classList.add('show-actions');
+            });
+            itemDiv.addEventListener('mouseleave', () => {
+              itemDiv.classList.remove('show-actions');
+            });
+
+            // 모바일 터치 시 해당 발원문 메뉴 표시 (다른 항목은 닫음)
+            itemDiv.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const willShow = !itemDiv.classList.contains('show-actions');
+              activePrayerBadge.querySelectorAll('.prayer-badge-item').forEach(el => {
+                el.classList.remove('show-actions');
+              });
+              if (willShow) itemDiv.classList.add('show-actions');
+            });
+          }
+
           activePrayerBadge.appendChild(itemDiv);
         });
         activePrayerBadge.classList.add('visible');
@@ -223,23 +243,24 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const saved = localStorage.getItem(`bomunsa_prayer_${locationId}`);
-    if (saved) {
+    if (prayers.length > 0) {
       activePrayerBadge.innerHTML = '';
-      const itemDiv = document.createElement('div');
-      itemDiv.className = 'prayer-badge-item';
+      prayers.forEach((pItem) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'prayer-badge-item';
 
-      const titleDiv = document.createElement('div');
-      titleDiv.className = 'prayer-badge-title';
-      titleDiv.innerHTML = `${WHITE_LOTUS_SVG}<span>나의 발원</span>`;
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'prayer-badge-title';
+        titleDiv.innerHTML = `${WHITE_LOTUS_SVG}<span>${pItem.isMine ? '나의 발원' : '도량 발원문'}</span>`;
 
-      const textDiv = document.createElement('div');
-      textDiv.className = 'prayer-badge-text';
-      textDiv.textContent = saved;
+        const textDiv = document.createElement('div');
+        textDiv.className = 'prayer-badge-text';
+        textDiv.textContent = pItem.text;
 
-      itemDiv.appendChild(titleDiv);
-      itemDiv.appendChild(textDiv);
-      activePrayerBadge.appendChild(itemDiv);
+        itemDiv.appendChild(titleDiv);
+        itemDiv.appendChild(textDiv);
+        activePrayerBadge.appendChild(itemDiv);
+      });
       activePrayerBadge.classList.add('visible');
     } else {
       activePrayerBadge.innerHTML = '';
@@ -718,11 +739,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   prayerCancelBtn.addEventListener('click', () => {
-    editingJijangIndex = null;
+    editingJijangTarget = null;
     prayerModalOverlay.classList.remove('active');
   });
 
-  prayerSubmitBtn.addEventListener('click', () => {
+  prayerSubmitBtn.addEventListener('click', async () => {
     const text = prayerInput.value.trim();
     if (!text) {
       alert('소원(발원문) 내용을 적어주세요.');
@@ -730,19 +751,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (app.activeLocation) {
-      if (app.activeLocation.id === 'jijang') {
-        const list = loadJijangPrayers();
-        if (editingJijangIndex !== null && list[editingJijangIndex] !== undefined) {
-          list[editingJijangIndex] = text;
-        } else {
-          list.push(text);
+      const locId = app.activeLocation.id;
+      if (locId === 'jijang') {
+        if (editingJijangTarget !== null && window.templeSync) {
+          await window.templeSync.updatePrayer('jijang', editingJijangTarget.id, text);
+        } else if (window.templeSync) {
+          await window.templeSync.addPrayer('jijang', text);
         }
-        editingJijangIndex = null;
-        saveJijangPrayers(list);
+        editingJijangTarget = null;
         refreshPrayerBadge('jijang');
       } else {
-        localStorage.setItem(`bomunsa_prayer_${app.activeLocation.id}`, text);
-        refreshPrayerBadge(app.activeLocation.id);
+        if (window.templeSync) {
+          await window.templeSync.addPrayer(locId, text);
+        }
+        refreshPrayerBadge(locId);
       }
     }
 
