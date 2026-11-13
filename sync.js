@@ -57,6 +57,35 @@ class TempleSync {
     return id;
   }
 
+  getSpawnPosForId(cid) {
+    // 입구(0, 34.0) 주변 10개 분산 배치 슬롯 (대문 '입장' 인식 반경 3.6m 이내 유지)
+    const slots = [
+      { x: 0.0, z: 34.0 },
+      { x: -1.1, z: 34.2 },
+      { x: 1.1, z: 34.2 },
+      { x: -1.8, z: 34.7 },
+      { x: 1.8, z: 34.7 },
+      { x: -0.6, z: 35.1 },
+      { x: 0.6, z: 35.1 },
+      { x: -1.5, z: 33.4 },
+      { x: 1.5, z: 33.4 },
+      { x: 0.0, z: 35.6 }
+    ];
+    let hash = 0;
+    const str = String(cid || '');
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 31 + str.charCodeAt(i)) | 0;
+    }
+    return slots[Math.abs(hash) % slots.length];
+  }
+
+  getInitialSpawnPos() {
+    if (!this.initialSpawn) {
+      this.initialSpawn = this.getSpawnPosForId(this.clientId);
+    }
+    return this.initialSpawn;
+  }
+
   initRealtime() {
     if (!this.supabase) return;
 
@@ -84,11 +113,12 @@ class TempleSync {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          const spawn = this.getInitialSpawnPos();
           await this.channel.track({
             clientId: this.clientId,
             joinedAt: this.joinedAt,
-            x: 0,
-            z: 34.0,
+            x: spawn.x,
+            z: spawn.z,
             rotY: Math.PI,
             isWalking: false,
             mode: 'outside'
@@ -145,10 +175,11 @@ class TempleSync {
       allowedList.forEach((u) => {
         if (u.clientId === this.clientId) return;
         if (!this.remoteStates.has(u.clientId)) {
+          const fallbackSpawn = this.getSpawnPosForId(u.clientId);
           this.remoteStates.set(u.clientId, {
             clientId: u.clientId,
-            x: u.x ?? 0,
-            z: u.z ?? 34.0,
+            x: u.x ?? fallbackSpawn.x,
+            z: u.z ?? fallbackSpawn.z,
             rotY: u.rotY ?? Math.PI,
             isWalking: Boolean(u.isWalking),
             mode: u.mode || 'outside',

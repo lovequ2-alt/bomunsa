@@ -11,7 +11,10 @@ class Bomunsa3D {
     this.groundMesh = null;
     this.walkTarget = null;
     this.targetLookAt = null;
-    this.playerPos = new THREE.Vector3(0, 0, 34.0);
+    const initialSpawn = window.templeSync && window.templeSync.getInitialSpawnPos
+      ? window.templeSync.getInitialSpawnPos()
+      : { x: 0, z: 34.0 };
+    this.playerPos = new THREE.Vector3(initialSpawn.x, 0, initialSpawn.z);
     this.isWalking = false;
     this.walkSpeed = 3.2;
     this.footstepTimer = 0;
@@ -5206,12 +5209,38 @@ class Bomunsa3D {
 
   updateRemotePilgrims(delta) {
     const showInYard = this.currentMode === 'outside' || this.currentMode === 'pagoda_spin';
-    this.remotePilgrims.forEach((entry) => {
+    const minSep = 0.95;
+    const placedPositions = [{ x: this.playerPos.x, z: this.playerPos.z }];
+
+    this.remotePilgrims.forEach((entry, cid) => {
       const shouldShow = showInYard && entry.mode !== 'inside';
       entry.group.visible = shouldShow;
       if (!shouldShow) return;
 
-      entry.group.position.lerp(entry.targetPos, Math.min(1, delta * 8.5));
+      // 다른 참배객 및 내 캐릭터와 겹치지 않도록 최소 거리(0.95m) 부드럽게 이격
+      const desired = entry.targetPos.clone();
+      for (let i = 0; i < placedPositions.length; i++) {
+        const other = placedPositions[i];
+        const dx = desired.x - other.x;
+        const dz = desired.z - other.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < minSep) {
+          if (dist > 0.001) {
+            const push = minSep - dist;
+            desired.x += (dx / dist) * push;
+            desired.z += (dz / dist) * push;
+          } else {
+            let h = 0;
+            for (let k = 0; k < cid.length; k++) h = (h * 31 + cid.charCodeAt(k)) | 0;
+            const ang = ((Math.abs(h) % 8) / 8) * Math.PI * 2;
+            desired.x += Math.cos(ang) * minSep;
+            desired.z += Math.sin(ang) * minSep;
+          }
+        }
+      }
+      placedPositions.push({ x: desired.x, z: desired.z });
+
+      entry.group.position.lerp(desired, Math.min(1, delta * 8.5));
       let diff = entry.targetRotY - entry.group.rotation.y;
       while (diff < -Math.PI) diff += Math.PI * 2;
       while (diff > Math.PI) diff -= Math.PI * 2;
