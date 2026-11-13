@@ -46,6 +46,9 @@ class Bomunsa3D {
 
     // 다중 접속 다른 참배객(최대 9명 추가 -> 본인 포함 10명)
     this.remotePilgrims = new Map();
+    this.waitingForLoc = null;
+    this.lastBusyLoc = null;
+    this.lastOccupiedState = false;
     this.remoteRobePalette = [
       0x74828f, 0x8d8274, 0x6f8076, 0x8b7b84, 0x7a7f8c,
       0x8e8670, 0x6c7a89, 0x857468, 0x76857d
@@ -450,6 +453,26 @@ class Bomunsa3D {
           newPos.z = obs.z + Math.sin(angle) * (minDist + 0.01);
           collided = true;
         }
+      }
+
+      // 3. 다른 참배객 캐릭터 충돌 검사 (서로 밀치거나 겹쳐 지나가지 않도록 부드럽게 우회)
+      if (this.remotePilgrims && this.currentMode === 'outside') {
+        const otherRadius = 0.42;
+        const minCharDist = otherRadius + playerRadius;
+        this.remotePilgrims.forEach((entry) => {
+          if (!entry.group || !entry.group.visible) return;
+          const ox = entry.group.position.x;
+          const oz = entry.group.position.z;
+          const dist = Math.hypot(newPos.x - ox, newPos.z - oz);
+          if (dist < minCharDist) {
+            const angle = dist > 0.001
+              ? Math.atan2(newPos.z - oz, newPos.x - ox)
+              : Math.PI * 0.25;
+            newPos.x = ox + Math.cos(angle) * (minCharDist + 0.02);
+            newPos.z = oz + Math.sin(angle) * (minCharDist + 0.02);
+            collided = true;
+          }
+        });
       }
     }
 
@@ -4327,9 +4350,15 @@ class Bomunsa3D {
 
     // 전각 탭 시 즉시 기존 팝업을 닫고, 바로 앞에 설 때까지 입장하기가 뜨지 않도록 처리
     this.activeLocation = null;
+    this.waitingForLoc = null;
     if (window.onLocationChanged) window.onLocationChanged(null);
 
-    const finalDest = item.position.clone();
+    const occupants = this.getOccupyingPilgrims(locationId, item.position);
+    let finalDest = item.position.clone();
+    if (occupants.length > 0 && locationId !== 'hojimun') {
+      finalDest = this.getSideWaitPos(item.position, occupants.length);
+      this.waitingForLoc = locationId;
+    }
     finalDest.y = this.getTerrainHeight(finalDest.x, finalDest.z);
     this.finalLookTarget = item.lookTarget ? item.lookTarget.clone() : null;
 
@@ -4460,10 +4489,19 @@ class Bomunsa3D {
       }
     });
 
-    if (nearest !== this.activeLocation) {
+    const isOccupied = nearest && nearest.id !== 'hojimun'
+      ? this.getOccupyingPilgrims(nearest.id, nearest.position).length > 0
+      : false;
+
+    if (nearest && isOccupied && !this.waitingForLoc) {
+      this.waitingForLoc = nearest.id;
+    }
+
+    if (nearest !== this.activeLocation || isOccupied !== this.lastOccupiedState) {
       this.activeLocation = nearest;
+      this.lastOccupiedState = isOccupied;
       if (window.onLocationChanged) {
-        window.onLocationChanged(nearest);
+        window.onLocationChanged(nearest ? { ...nearest, occupiedByOther: isOccupied } : null);
       }
     }
   }
@@ -5171,17 +5209,87 @@ class Bomunsa3D {
 
     // 실시간 동시접속 참배객 위치/동작 보간 및 내 위치 전송
     this.updateRemotePilgrims(delta);
+    this.checkWaitingTurn();
     if (window.templeSync) {
+      const busyLoc = this.getLocalBusyLoc();
+      const forceSync = busyLoc !== this.lastBusyLoc;
+      this.lastBusyLoc = busyLoc;
       window.templeSync.broadcastState({
         x: this.playerPos.x,
         z: this.playerPos.z,
         rotY: this.characterGroup ? this.characterGroup.rotation.y : this.currentCharRotation,
         isWalking: Boolean(this.isWalking || this.pagodaIsRunning),
-        mode: this.currentMode
-      });
+        mode: this.currentMode,
+        busyLoc
+      }, forceSync);
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  getLocalBusyLoc() {
+    if (this.isGwanyokActive) return 'gwanyok';
+    if (this.isBeomjongReady || this.isBeomjongRinging) return 'beomjong';
+    if (this.currentMode === 'pagoda_spin') return 'pagoda';
+    if (this.currentMode && this.currentMode.startsWith('inside_')) {
+      return this.currentMode.replace('inside_', '');
+    }
+    return null;
+  }
+
+  getOccupyingPilgrims(locationId, itemPos) {
+    const occupants = [];
+    if (!this.remotePilgrims || !itemPos) return occupants;
+    this.remotePilgrims.forEach((entry, cid) => {
+      if (entry.busyLoc === locationId) {
+        occupants.push(cid);
+        return;
+      }
+      if (entry.group && entry.group.visible) {
+        const dist = Math.hypot(entry.targetPos.x - itemPos.x, entry.targetPos.z - itemPos.z);
+        if (dist < 1.35) {
+          occupants.push(cid);
+        }
+      }
+    });
+    return occupants;
+  }
+
+  getSideWaitPos(itemPos, occupantCount) {
+    const offsets = [
+      { x: 1.45, z: 0.45 },
+      { x: -1.45, z: 0.45 },
+      { x: 2.20, z: 0.85 },
+      { x: -2.20, z: 0.85 },
+      { x: 1.45, z: 1.40 },
+      { x: -1.45, z: 1.40 }
+    ];
+    for (let i = 0; i < offsets.length; i++) {
+      const idx = (Math.max(0, occupantCount - 1) + i) % offsets.length;
+      const cand = new THREE.Vector3(itemPos.x + offsets[idx].x, 0, itemPos.z + offsets[idx].z);
+      const test = cand.clone();
+      if (!this.checkCollision(test) || cand.distanceTo(test) < 0.25) {
+        return test;
+      }
+    }
+    return new THREE.Vector3(itemPos.x + 1.5, 0, itemPos.z + 0.8);
+  }
+
+  checkWaitingTurn() {
+    if (!this.waitingForLoc || this.isWalking) return;
+    const item = this.interactables.find(i => i.id === this.waitingForLoc);
+    if (!item) {
+      this.waitingForLoc = null;
+      return;
+    }
+    const occupants = this.getOccupyingPilgrims(item.id, item.position);
+    if (occupants.length === 0) {
+      this.waitingForLoc = null;
+      this.checkInteractables();
+      if (window.onTurnReady) {
+        window.onTurnReady(item);
+      }
+    }
   }
 
   syncRemotePilgrims(remoteStates) {
@@ -5215,6 +5323,7 @@ class Bomunsa3D {
           targetRotY: st.rotY ?? Math.PI,
           isWalking: Boolean(st.isWalking),
           mode: st.mode || 'outside',
+          busyLoc: st.busyLoc || null,
           walkTime: Math.random() * Math.PI * 2
         };
         this.remotePilgrims.set(cid, entry);
@@ -5223,8 +5332,10 @@ class Bomunsa3D {
         entry.targetRotY = st.rotY ?? Math.PI;
         entry.isWalking = Boolean(st.isWalking);
         entry.mode = st.mode || 'outside';
+        entry.busyLoc = st.busyLoc || null;
       }
     });
+    this.checkWaitingTurn();
   }
 
   updateRemotePilgrims(delta) {

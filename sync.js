@@ -223,7 +223,8 @@ class TempleSync {
         z: Number(state.z.toFixed(2)),
         rotY: Number(state.rotY.toFixed(2)),
         isWalking: Boolean(state.isWalking),
-        mode: state.mode || 'outside'
+        mode: state.mode || 'outside',
+        busyLoc: state.busyLoc || null
       }
     });
   }

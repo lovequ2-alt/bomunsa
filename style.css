@@ -1201,3 +1201,30 @@ body.beomjong-ready .control-hint {
   border-color: rgba(255, 180, 120, 0.45);
   color: #ffd8b5;
 }
+
+/* 순서 대기 / 차례 안내 배너 */
+.turn-toast {
+  position: fixed;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  max-width: min(90vw, 420px);
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(16, 20, 28, 0.90);
+  border: 1px solid rgba(255, 217, 102, 0.55);
+  color: #fff3cc;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.turn-toast.ready {
+  background: rgba(32, 42, 24, 0.94);
+  border-color: #ffd966;
+  color: #ffe89e;
+}

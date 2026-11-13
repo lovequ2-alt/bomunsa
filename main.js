@@ -281,6 +281,38 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('touchstart', hidePrayerActionsOutside, { passive: true });
   document.addEventListener('click', hidePrayerActionsOutside);
 
+  // 대기 / 순서 안내 토스트
+  const turnToast = document.getElementById('turn-toast');
+  let turnToastTimer = null;
+  function showTurnToast(msg, isReady = false, autoHideMs = 0) {
+    if (!turnToast) return;
+    if (turnToastTimer) {
+      clearTimeout(turnToastTimer);
+      turnToastTimer = null;
+    }
+    if (!msg) {
+      turnToast.style.display = 'none';
+      turnToast.classList.remove('ready');
+      return;
+    }
+    turnToast.textContent = msg;
+    turnToast.classList.toggle('ready', !!isReady);
+    turnToast.style.display = 'block';
+    if (autoHideMs > 0) {
+      turnToastTimer = setTimeout(() => {
+        turnToast.style.display = 'none';
+        turnToast.classList.remove('ready');
+        turnToastTimer = null;
+      }, autoHideMs);
+    }
+  }
+
+  window.onTurnReady = (loc) => {
+    if (!loc) return;
+    showTurnToast(`🔔 순서가 되었습니다! 이제 ${loc.name}을(를) 이용하실 수 있습니다.`, true, 5000);
+    window.templeAudio?.playSingleMoktak();
+  };
+
   // 1. 전각 근접 시 카드 업데이트
   const hojimunPill = document.querySelector('.nav-pill[data-id="hojimun"]');
   window.onLocationChanged = (loc) => {
@@ -295,6 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
       setBellReturnVisible(false);
       if (gwanyokMeditationMsg) gwanyokMeditationMsg.style.display = 'none';
       if (locationDesc) locationDesc.style.display = '';
+      enterBtn.disabled = false;
+      if (turnToast && !turnToast.classList.contains('ready')) {
+        showTurnToast(null);
+      }
       return;
     }
     if (hojimunPill) {
@@ -317,23 +353,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loc.enterable) {
       enterBtn.style.display = 'flex';
-      if (loc.id === 'pagoda') {
-        enterBtn.innerHTML = '<span>🚶</span> 탑돌이 (사색 걷기) 시작';
-      } else if (loc.id === 'beomjong') {
-        if (app.isBeomjongReady) {
-          enterBtn.innerHTML = '<span>🔔</span> 타종하기';
-          setBellReturnVisible(true);
-        } else {
-          enterBtn.innerHTML = '<span>🔔</span> 타종준비';
-          setBellReturnVisible(false);
-        }
-      } else if (loc.id === 'gwanyok') {
-        enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
+      if (loc.occupiedByOther) {
+        enterBtn.disabled = true;
+        enterBtn.innerHTML = '<span>⏳</span> 앞선 참배객 대기 중...';
+        showTurnToast('⏳ 앞선 참배객이 이용 중입니다. 옆에서 잠시 대기해 주세요.', false, 0);
       } else {
-        enterBtn.innerHTML = '<span>🚪</span> 전각 안으로 입장하기';
+        enterBtn.disabled = false;
+        if (turnToast && !turnToast.classList.contains('ready')) {
+          showTurnToast(null);
+        }
+        if (loc.id === 'pagoda') {
+          enterBtn.innerHTML = '<span>🚶</span> 탑돌이 (사색 걷기) 시작';
+        } else if (loc.id === 'beomjong') {
+          if (app.isBeomjongReady) {
+            enterBtn.innerHTML = '<span>🔔</span> 타종하기';
+            setBellReturnVisible(true);
+          } else {
+            enterBtn.innerHTML = '<span>🔔</span> 타종준비';
+            setBellReturnVisible(false);
+          }
+        } else if (loc.id === 'gwanyok') {
+          enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
+        } else {
+          enterBtn.innerHTML = '<span>🚪</span> 전각 안으로 입장하기';
+        }
       }
     } else {
+      enterBtn.disabled = false;
       enterBtn.style.display = 'none';
+      if (turnToast && !turnToast.classList.contains('ready')) {
+        showTurnToast(null);
+      }
     }
 
     locationCard.classList.add('visible');
