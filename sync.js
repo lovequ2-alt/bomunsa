@@ -5,8 +5,8 @@ window.BOMUNSA_SYNC_CONFIG = {
   provider: 'supabase',
   // 아래 두 값에 Supabase 대시보드(Project Settings -> API)의 URL과 anon public key를 입력하세요.
   // 비어 있으면 자동으로 개인 기기(localStorage) 단독 모드로 동작합니다.
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://tlqmjatgoaltjmvahskk.supabase.co',
+  supabaseAnonKey: 'sb_publishable_CoMeHch-_mH_6N5yATJIQg_SiF_Q35t',
   maxConcurrentUsers: 10
 };
 
