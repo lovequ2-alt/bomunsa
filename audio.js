@@ -177,10 +177,12 @@ class TempleAudio {
           try {
             const src = this.ctx.createMediaElementSource(this.moktakAudio);
             const boostGain = this.ctx.createGain();
-            boostGain.gain.setValueAtTime(3.0, this.ctx.currentTime);
+            // masterGain(0.85)을 감안하여 순수 출력이 약 5배 이상(6.0 * 0.85 = 5.1배) 되도록 증폭
+            boostGain.gain.setValueAtTime(6.0, this.ctx.currentTime);
             const compressor = this.ctx.createDynamicsCompressor();
-            compressor.threshold.setValueAtTime(-10, this.ctx.currentTime);
-            compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+            compressor.threshold.setValueAtTime(-2, this.ctx.currentTime);
+            compressor.knee.setValueAtTime(6, this.ctx.currentTime);
+            compressor.ratio.setValueAtTime(3, this.ctx.currentTime);
             src.connect(boostGain);
             boostGain.connect(compressor);
             compressor.connect(this.masterGain);
