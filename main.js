@@ -1,9 +1,6 @@
 // 저 절로 웹앱 메인 컨트롤러
 
 document.addEventListener('DOMContentLoaded', () => {
-  const container = document.getElementById('canvas-container');
-  const app = new Bomunsa3D(container);
-
   // [사용자 요청 반영: 대문 진입 전 정지화면 스플래시 (절로 절로 저 절로 / 도심속 / 천년고찰 / 비구니 사찰입니다.)]
   const splashOverlay = document.getElementById('splash-overlay');
   if (splashOverlay) {
@@ -17,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const container = document.getElementById('canvas-container');
+  const app = new Bomunsa3D(container);
+
   // UI 캐싱
   const muteBtn = document.getElementById('mute-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
@@ -25,6 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const locationTag = document.getElementById('location-tag');
   const locationDesc = document.getElementById('location-desc');
   const enterBtn = document.getElementById('enter-btn');
+  const bellReturnBtn = document.getElementById('bell-return-btn');
+  const gwanyokMeditationMsg = document.getElementById('gwanyok-meditation-msg');
+  let bellMsgTimer = null;
+
+  function setBellReturnVisible(visible) {
+    if (bellReturnBtn) {
+      bellReturnBtn.style.display = visible ? 'inline-flex' : 'none';
+    }
+    document.body.classList.toggle('beomjong-ready', Boolean(visible));
+  }
   const meditationOverlay = document.getElementById('meditation-overlay');
   const templeHeaderGroup = document.getElementById('temple-header-group');
   const meditationTitle = document.getElementById('meditation-title');
@@ -55,8 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 발원문 모달
   const openPrayerBtn = document.getElementById('open-prayer-btn');
+  const openPrayerText = document.getElementById('open-prayer-text');
   const prayerModalOverlay = document.getElementById('prayer-modal-overlay');
   const prayerModalTitle = document.getElementById('prayer-modal-title');
+  const prayerModalDesc = document.getElementById('prayer-modal-desc');
   const prayerInput = document.getElementById('prayer-input');
   const prayerSubmitBtn = document.getElementById('prayer-submit-btn');
   const prayerCancelBtn = document.getElementById('prayer-cancel-btn');
@@ -79,40 +91,223 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 하얀 연꽃 로고 공통 SVG 마크업
+  const WHITE_LOTUS_SVG = '<svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>';
+
+  // 지장전 다중 발원문 목록 및 수정 대상 인덱스
+  let jijangPrayers = [];
+  let editingJijangIndex = null;
+
+  function loadJijangPrayers() {
+    try {
+      const raw = localStorage.getItem('bomunsa_prayers_jijang_list');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  function saveJijangPrayers(list) {
+    jijangPrayers = list;
+    localStorage.setItem('bomunsa_prayers_jijang_list', JSON.stringify(list));
+    if (app.syncJijangLanterns) {
+      app.syncJijangLanterns(list.length);
+    }
+  }
+
+  function openJijangPrayerModal(editIdx = null) {
+    editingJijangIndex = editIdx;
+    if (editIdx !== null && jijangPrayers[editIdx] !== undefined) {
+      prayerModalTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>지장전 발원문 변경하기</span>`;
+      if (prayerModalDesc) {
+        prayerModalDesc.textContent = '올려둔 영가등의 극락왕생·업장소멸 발원문 내용을 수정합니다.';
+      }
+      prayerInput.value = jijangPrayers[editIdx];
+      prayerSubmitBtn.innerHTML = `${WHITE_LOTUS_SVG}<span>발원문 수정 완료</span>`;
+    } else {
+      prayerModalTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>지장전 영가등 올리고 소원빌기</span>`;
+      if (prayerModalDesc) {
+        prayerModalDesc.textContent = '돌아가신 분을 위한 극락왕생(極樂往生)과 업장소멸(業障消滅)의 소원을 빌면 천정의 회색 영가등에 노란 불빛이 하나씩 밝게 켜집니다.';
+      }
+      prayerInput.placeholder = '예: 사랑하는 고인의 극락왕생과 모든 업장소멸을 간절히 발원합니다...';
+      prayerInput.value = '';
+      prayerSubmitBtn.innerHTML = `${WHITE_LOTUS_SVG}<span>영가등 추가하고 소원 빌기</span>`;
+    }
+    prayerModalOverlay.classList.add('active');
+    prayerInput.focus();
+  }
+
   function refreshPrayerBadge(locationId) {
+    if (locationId === 'jijang') {
+      jijangPrayers = loadJijangPrayers();
+      if (app.syncJijangLanterns) {
+        app.syncJijangLanterns(jijangPrayers.length);
+      }
+      if (openPrayerText) {
+        openPrayerText.textContent = jijangPrayers.length > 0 ? '영가등 추가하고 소원빌기' : '영가등 올리고 소원빌기';
+      }
+      if (jijangPrayers.length > 0) {
+        activePrayerBadge.innerHTML = '';
+        jijangPrayers.forEach((pText, idx) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'prayer-badge-item';
+
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'prayer-badge-title';
+          titleDiv.innerHTML = `${WHITE_LOTUS_SVG}<span>영가등 · 극락왕생 소원</span>`;
+
+          const textDiv = document.createElement('div');
+          textDiv.className = 'prayer-badge-text';
+          textDiv.textContent = pText;
+
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'prayer-badge-actions';
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'prayer-action-btn';
+          editBtn.textContent = '발원문 변경';
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openJijangPrayerModal(idx);
+          });
+
+          const offBtn = document.createElement('button');
+          offBtn.type = 'button';
+          offBtn.className = 'prayer-action-btn turn-off';
+          offBtn.textContent = '등 끄기';
+          offBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const updated = loadJijangPrayers();
+            updated.splice(idx, 1);
+            saveJijangPrayers(updated);
+            refreshPrayerBadge('jijang');
+          });
+
+          actionsDiv.appendChild(editBtn);
+          actionsDiv.appendChild(offBtn);
+
+          // 마우스 진입 시 표시, 마우스가 벗어나면 숨김
+          itemDiv.addEventListener('mouseenter', () => {
+            activePrayerBadge.querySelectorAll('.prayer-badge-item').forEach(el => {
+              if (el !== itemDiv) el.classList.remove('show-actions');
+            });
+            itemDiv.classList.add('show-actions');
+          });
+          itemDiv.addEventListener('mouseleave', () => {
+            itemDiv.classList.remove('show-actions');
+          });
+
+          // 모바일 터치 시 해당 발원문 메뉴 표시 (다른 항목은 닫음)
+          itemDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const willShow = !itemDiv.classList.contains('show-actions');
+            activePrayerBadge.querySelectorAll('.prayer-badge-item').forEach(el => {
+              el.classList.remove('show-actions');
+            });
+            if (willShow) itemDiv.classList.add('show-actions');
+          });
+
+          itemDiv.appendChild(titleDiv);
+          itemDiv.appendChild(textDiv);
+          itemDiv.appendChild(actionsDiv);
+          activePrayerBadge.appendChild(itemDiv);
+        });
+        activePrayerBadge.classList.add('visible');
+      } else {
+        activePrayerBadge.innerHTML = '';
+        activePrayerBadge.classList.remove('visible');
+      }
+      return;
+    }
+
     const saved = localStorage.getItem(`bomunsa_prayer_${locationId}`);
     if (saved) {
       activePrayerBadge.innerHTML = '';
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'prayer-badge-item';
+
       const titleDiv = document.createElement('div');
       titleDiv.className = 'prayer-badge-title';
-      titleDiv.textContent = '🪷 나의 발원';
+      titleDiv.innerHTML = `${WHITE_LOTUS_SVG}<span>나의 발원</span>`;
+
       const textDiv = document.createElement('div');
       textDiv.className = 'prayer-badge-text';
       textDiv.textContent = saved;
-      activePrayerBadge.appendChild(titleDiv);
-      activePrayerBadge.appendChild(textDiv);
+
+      itemDiv.appendChild(titleDiv);
+      itemDiv.appendChild(textDiv);
+      activePrayerBadge.appendChild(itemDiv);
       activePrayerBadge.classList.add('visible');
     } else {
+      activePrayerBadge.innerHTML = '';
       activePrayerBadge.classList.remove('visible');
     }
   }
 
+  // 발원문 배지 바깥 영역을 터치/클릭하면 수정 메뉴 닫기
+  const hidePrayerActionsOutside = (e) => {
+    if (!activePrayerBadge) return;
+    if (!e.target.closest || !e.target.closest('.prayer-badge-item')) {
+      activePrayerBadge.querySelectorAll('.prayer-badge-item.show-actions').forEach(el => {
+        el.classList.remove('show-actions');
+      });
+    }
+  };
+  document.addEventListener('pointerdown', hidePrayerActionsOutside);
+  document.addEventListener('touchstart', hidePrayerActionsOutside, { passive: true });
+  document.addEventListener('click', hidePrayerActionsOutside);
+
   // 1. 전각 근접 시 카드 업데이트
+  const hojimunPill = document.querySelector('.nav-pill[data-id="hojimun"]');
   window.onLocationChanged = (loc) => {
+    if (bellMsgTimer) {
+      clearTimeout(bellMsgTimer);
+      bellMsgTimer = null;
+    }
     if (!loc) {
       locationCard.classList.remove('visible');
       navPills.forEach(p => p.classList.remove('active'));
+      if (hojimunPill) hojimunPill.textContent = '🚪 입구';
+      setBellReturnVisible(false);
+      if (gwanyokMeditationMsg) gwanyokMeditationMsg.style.display = 'none';
+      if (locationDesc) locationDesc.style.display = '';
       return;
     }
+    if (hojimunPill) {
+      hojimunPill.textContent = loc.id === 'hojimun' ? '🚪 입장' : '🚪 입구';
+    }
 
-    locationTitle.textContent = loc.name;
+    if (loc.id === 'jijang') {
+      locationTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>${loc.name}</span>`;
+    } else {
+      locationTitle.textContent = loc.name;
+    }
     locationDesc.textContent = loc.desc;
-    locationTag.textContent = loc.enterable ? '참배 및 명상 가능 도량' : '경내 안내';
+    locationDesc.style.display = '';
+    if (locationTag) locationTag.style.display = 'none';
+    if (gwanyokMeditationMsg) gwanyokMeditationMsg.style.display = 'none';
+
+    if (loc.id !== 'beomjong') {
+      setBellReturnVisible(false);
+    }
 
     if (loc.enterable) {
       enterBtn.style.display = 'flex';
       if (loc.id === 'pagoda') {
         enterBtn.innerHTML = '<span>🚶</span> 탑돌이 (사색 걷기) 시작';
+      } else if (loc.id === 'beomjong') {
+        if (app.isBeomjongReady) {
+          enterBtn.innerHTML = '<span>🔔</span> 타종하기';
+          setBellReturnVisible(true);
+        } else {
+          enterBtn.innerHTML = '<span>🔔</span> 타종준비';
+          setBellReturnVisible(false);
+        }
+      } else if (loc.id === 'gwanyok') {
+        enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
       } else {
         enterBtn.innerHTML = '<span>🚪</span> 전각 안으로 입장하기';
       }
@@ -128,11 +323,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // 초기 시작 시 캐릭터가 입구(hojimun) 앞에 서 있으면 즉시 하단 메뉴를 '입장'으로 갱신
+  if (app.activeLocation) {
+    window.onLocationChanged(app.activeLocation);
+  }
+
   // 2. 하단 내비게이션 탭 클릭 (전각 정면 이동)
   navPills.forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
       locationCard.classList.remove('visible'); // [요청 반영] 이동 중에는 팝업을 닫고, 바로 앞에 설 때까지 대기!
+      if (id === 'hojimun' && ((app.activeLocation && app.activeLocation.id === 'hojimun') || app.playerPos.z >= 29.5)) {
+        if (app.enterTempleGate) app.enterTempleGate();
+        return;
+      }
       app.walkToLocation(id);
       navPills.forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
@@ -164,15 +368,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 4. 전각 입장 / 탑돌이 시작
+  // 4. 전각 입장 / 탑돌이 시작 / 범종 타종
   enterBtn.addEventListener('click', () => {
     if (!app.activeLocation) return;
     const currentLoc = app.activeLocation;
+
+    if (currentLoc.id === 'beomjong') {
+      if (!app.isBeomjongReady) {
+        if (app.prepareBeomjongBell) app.prepareBeomjongBell();
+        enterBtn.innerHTML = '<span>🔔</span> 타종하기';
+        setBellReturnVisible(true);
+      } else {
+        if (bellMsgTimer) {
+          clearTimeout(bellMsgTimer);
+          bellMsgTimer = null;
+        }
+        if (locationDesc) locationDesc.style.display = 'none';
+        if (gwanyokMeditationMsg) {
+          gwanyokMeditationMsg.textContent = '종소리가 울리는 순간, 고통받는 영혼들이 평안을 얻고 번뇌를 끊어 깨달음의 길로 나아가길 기원합니다.';
+          gwanyokMeditationMsg.style.display = 'block';
+        }
+        if (app.ringBeomjongBell) {
+          app.ringBeomjongBell(() => {
+            bellMsgTimer = setTimeout(() => {
+              if (app.activeLocation && app.activeLocation.id === 'beomjong' && !app.isBeomjongRinging) {
+                if (gwanyokMeditationMsg) gwanyokMeditationMsg.style.display = 'none';
+                if (locationDesc) locationDesc.style.display = '';
+              }
+            }, 4000);
+          });
+        }
+      }
+      return;
+    }
+
+    if (currentLoc.id === 'gwanyok') {
+      if (app.isGwanyokActive) return;
+      const waterSteps = [
+        { label: '첫번째 물', msg: '탐욕(貪)을 씻어냄 · 욕심과 집착을 비우고 마음을 맑힙니다.' },
+        { label: '두번째 물', msg: '성냄(瞋)을 씻어냄 · 화와 미움을 내려놓고 자비심을 키웁니다.' },
+        { label: '세번째 물', msg: '어리석음(癡)을 씻어냄 · 무지와 편견을 씻고 지혜의 눈을 뜹니다.' }
+      ];
+      enterBtn.innerHTML = `<span>💧</span> ${waterSteps[0].label}`;
+      if (gwanyokMeditationMsg) {
+        gwanyokMeditationMsg.textContent = waterSteps[0].msg;
+        gwanyokMeditationMsg.style.display = 'block';
+      }
+
+      app.performGwanyok(
+        (currentStep) => {
+          const stepInfo = waterSteps[currentStep - 1] || waterSteps[0];
+          enterBtn.innerHTML = `<span>💧</span> ${stepInfo.label}`;
+          if (gwanyokMeditationMsg) {
+            gwanyokMeditationMsg.textContent = stepInfo.msg;
+            gwanyokMeditationMsg.style.display = 'block';
+          }
+        },
+        () => {
+          enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
+          if (gwanyokMeditationMsg) {
+            gwanyokMeditationMsg.style.display = 'none';
+          }
+        }
+      );
+      return;
+    }
 
     locationCard.classList.remove('visible');
     document.body.classList.add('in-meditation');
 
     app.enterCurrentBuilding();
+    if (openPrayerText && currentLoc.id !== 'jijang') {
+      openPrayerText.textContent = '발원문 올리기';
+    }
     refreshPrayerBadge(currentLoc.id);
 
     // 버튼 초기화 (사용자 요청 반영: 처음에 들어가면 향과 초가 꺼진 상태로 시작)
@@ -235,34 +503,71 @@ document.addEventListener('DOMContentLoaded', () => {
           window.templeAudio.stopMoktakLoop();
           window.templeAudio.playSingingBowl(196, 8.0);
         };
-      } else if (currentLoc.id === 'daewoong') {
-        meditationTitle.textContent = '대웅전';
+      } else if (currentLoc.id === 'daewoong' || currentLoc.id === 'jijang') {
         if (meditationSub) meditationSub.style.display = 'none';
-        instrumentText.textContent = '목탁 울리기';
+        if (currentLoc.id === 'jijang') {
+          meditationTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>지장전</span>`;
+          instrumentText.textContent = '요령흔들기';
+          instrumentBtn.onclick = () => {
+            window.templeAudio.toggleYoryeongLoop((isLooping) => {
+              if (isLooping) {
+                instrumentBtn.classList.add('active');
+                instrumentText.textContent = '요령 멈추기';
+              } else {
+                instrumentBtn.classList.remove('active');
+                instrumentText.textContent = '요령흔들기';
+              }
+            });
+          };
+        } else {
+          meditationTitle.textContent = '대웅전';
+          instrumentText.textContent = '목탁 울리기';
+          instrumentBtn.onclick = () => {
+            window.templeAudio.toggleMoktakLoop((isLooping) => {
+              if (isLooping) {
+                instrumentBtn.classList.add('active');
+                instrumentText.textContent = '목탁 멈추기';
+              } else {
+                instrumentBtn.classList.remove('active');
+                instrumentText.textContent = '목탁 울리기';
+              }
+            });
+          };
+        }
+      } else if (currentLoc.id === 'sansin') {
+        meditationTitle.textContent = '산령각';
+        if (meditationSub) meditationSub.style.display = 'none';
+        instrumentText.textContent = '풍경소리';
         instrumentBtn.onclick = () => {
-          window.templeAudio.toggleMoktakLoop((isLooping) => {
+          window.templeAudio.toggleWindChimeLoop((isLooping) => {
             if (isLooping) {
               instrumentBtn.classList.add('active');
-              instrumentText.textContent = '목탁 멈추기';
+              instrumentText.textContent = '풍경소리 멈추기';
             } else {
               instrumentBtn.classList.remove('active');
-              instrumentText.textContent = '목탁 울리기';
+              instrumentText.textContent = '풍경소리';
             }
           });
-        };
-      } else if (currentLoc.id === 'sansin') {
-        meditationTitle.textContent = '산신각';
-        if (meditationSub) meditationSub.style.display = 'none';
-        instrumentText.textContent = '싱잉볼 치기';
-        instrumentBtn.onclick = () => {
-          window.templeAudio.stopMoktakLoop();
-          window.templeAudio.playSingingBowl();
         };
       }
     }
 
     meditationOverlay.classList.add('active');
   });
+
+  if (bellReturnBtn) {
+    bellReturnBtn.addEventListener('click', () => {
+      if (bellMsgTimer) {
+        clearTimeout(bellMsgTimer);
+        bellMsgTimer = null;
+      }
+      if (app.stopBeomjongBell) app.stopBeomjongBell();
+      enterBtn.innerHTML = '<span>🔔</span> 타종준비';
+      if (locationDesc) locationDesc.style.display = '';
+      if (gwanyokMeditationMsg) gwanyokMeditationMsg.style.display = 'none';
+      setBellReturnVisible(false);
+    });
+  }
 
   // [요청 반영] '호흡 명상' 메뉴 버튼 토글 (불단을 가리지 않고 필요할 때만 켜고 끔)
   let isMeditationActive = false;
@@ -376,7 +681,11 @@ document.addEventListener('DOMContentLoaded', () => {
     stopBreathTextLoop();
     breathContainer.style.display = 'none';
 
-    if (window.templeAudio) window.templeAudio.stopMoktakLoop();
+    if (window.templeAudio) {
+      window.templeAudio.stopMoktakLoop();
+      window.templeAudio.stopYoryeongLoop();
+      window.templeAudio.stopWindChimeLoop();
+    }
     instrumentBtn.classList.remove('active');
 
     document.body.classList.remove('in-meditation');
@@ -387,30 +696,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 6. 발원문 팝업 모달
+  // 6. 발원문 / 지장전 소원 쓰고 등달기 팝업 모달
   openPrayerBtn.addEventListener('click', () => {
     if (!app.activeLocation) return;
-    prayerModalTitle.textContent = `🪷 ${app.activeLocation.name} 발원문(發願文)`;
-    const saved = localStorage.getItem(`bomunsa_prayer_${app.activeLocation.id}`) || '';
-    prayerInput.value = saved;
+    if (app.activeLocation.id === 'jijang') {
+      openJijangPrayerModal(null);
+      return;
+    } else {
+      editingJijangIndex = null;
+      prayerModalTitle.innerHTML = `${WHITE_LOTUS_SVG}<span>${app.activeLocation.name} 발원문(發願文)</span>`;
+      if (prayerModalDesc) {
+        prayerModalDesc.textContent = '고요히 두 손을 모으고 마음속 간절한 서원(소원)을 적어보세요.';
+      }
+      prayerInput.placeholder = '예: 가족 모두의 건강과 마음의 평안을 발원합니다...';
+      prayerSubmitBtn.innerHTML = `${WHITE_LOTUS_SVG}<span>발원 올리기</span>`;
+      const saved = localStorage.getItem(`bomunsa_prayer_${app.activeLocation.id}`) || '';
+      prayerInput.value = saved;
+    }
     prayerModalOverlay.classList.add('active');
     prayerInput.focus();
   });
 
   prayerCancelBtn.addEventListener('click', () => {
+    editingJijangIndex = null;
     prayerModalOverlay.classList.remove('active');
   });
 
   prayerSubmitBtn.addEventListener('click', () => {
     const text = prayerInput.value.trim();
     if (!text) {
-      alert('발원문 내용을 적어주세요.');
+      alert('소원(발원문) 내용을 적어주세요.');
       return;
     }
 
     if (app.activeLocation) {
-      localStorage.setItem(`bomunsa_prayer_${app.activeLocation.id}`, text);
-      refreshPrayerBadge(app.activeLocation.id);
+      if (app.activeLocation.id === 'jijang') {
+        const list = loadJijangPrayers();
+        if (editingJijangIndex !== null && list[editingJijangIndex] !== undefined) {
+          list[editingJijangIndex] = text;
+        } else {
+          list.push(text);
+        }
+        editingJijangIndex = null;
+        saveJijangPrayers(list);
+        refreshPrayerBadge('jijang');
+      } else {
+        localStorage.setItem(`bomunsa_prayer_${app.activeLocation.id}`, text);
+        refreshPrayerBadge(app.activeLocation.id);
+      }
     }
 
     prayerModalOverlay.classList.remove('active');
@@ -437,6 +770,26 @@ document.addEventListener('DOMContentLoaded', () => {
       document.exitFullscreen().catch(() => {});
     }
   });
+
+  // 9. 음원 출처 및 저작권 안내 모달
+  const creditBtn = document.getElementById('credit-btn');
+  const creditModalOverlay = document.getElementById('credit-modal-overlay');
+  const creditCloseBtn = document.getElementById('credit-close-btn');
+  if (creditBtn && creditModalOverlay) {
+    creditBtn.addEventListener('click', () => {
+      creditModalOverlay.classList.add('active');
+    });
+    if (creditCloseBtn) {
+      creditCloseBtn.addEventListener('click', () => {
+        creditModalOverlay.classList.remove('active');
+      });
+    }
+    creditModalOverlay.addEventListener('click', (e) => {
+      if (e.target === creditModalOverlay) {
+        creditModalOverlay.classList.remove('active');
+      }
+    });
+  }
 
   // [요청 반영] 도량에 들어서면(첫 화면 터치/클릭 시) 장엄한 대형 범종 소리가 도량에 울려 퍼짐
   const firstTouchHandler = () => {

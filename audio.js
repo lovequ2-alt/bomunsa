@@ -13,7 +13,20 @@ class TempleAudio {
     this.isMoktakLooping = false;
     this.moktakInterval = null;
     this.moktakBuffer = null;
+    this.moktakAudio = new Audio('목탁소리.mp3');
+    this.moktakAudio.preload = 'auto';
+    this.moktakAudio.loop = true;
     this.hasPlayedBellIntro = false;
+
+    // 요령 루프 상태 (지장전)
+    this.isYoryeongLooping = false;
+    this.yoryeongAudio = new Audio('요령.mp3');
+    this.yoryeongAudio.preload = 'auto';
+    this.yoryeongAudio.loop = true;
+
+    // 풍경소리 루프 상태 (산령각)
+    this.isWindChimeLooping = false;
+    this.windChimeInterval = null;
 
     // 산속 새소리 스케줄러
     this.birdTimeout = null;
@@ -41,6 +54,12 @@ class TempleAudio {
     this.isMuted = !this.isMuted;
     if (this.masterGain) {
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, this.ctx.currentTime);
+    }
+    if (this.yoryeongAudio) {
+      this.yoryeongAudio.muted = this.isMuted;
+    }
+    if (this.moktakAudio) {
+      this.moktakAudio.muted = this.isMuted;
     }
     return this.isMuted;
   }
@@ -119,6 +138,11 @@ class TempleAudio {
   playSingleMoktak() {
     this.resume();
     if (this.isMuted) return;
+    this.playSynthMoktakFallback();
+  }
+
+  playSynthMoktakFallback() {
+    if (!this.ctx || this.isMuted) return;
     if (!this.moktakBuffer) this.generateRealisticMoktakBuffer();
 
     const source = this.ctx.createBufferSource();
@@ -145,11 +169,26 @@ class TempleAudio {
       if (callback) callback(false);
       return false;
     } else {
+      this.stopYoryeongLoop();
+      this.stopWindChimeLoop();
       this.isMoktakLooping = true;
-      this.playSingleMoktak();
-      this.moktakInterval = setInterval(() => {
+      if (this.moktakAudio) {
+        this.moktakAudio.currentTime = 0;
+        this.moktakAudio.volume = 0.85;
+        this.moktakAudio.muted = this.isMuted;
+        this.moktakAudio.loop = true;
+        const p = this.moktakAudio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {
+            if (!this.isMoktakLooping) return;
+            this.playSingleMoktak();
+            this.moktakInterval = setInterval(() => this.playSingleMoktak(), 1250);
+          });
+        }
+      } else {
         this.playSingleMoktak();
-      }, 1250);
+        this.moktakInterval = setInterval(() => this.playSingleMoktak(), 1250);
+      }
       if (callback) callback(true);
       return true;
     }
@@ -160,6 +199,66 @@ class TempleAudio {
     if (this.moktakInterval) {
       clearInterval(this.moktakInterval);
       this.moktakInterval = null;
+    }
+    if (this.moktakAudio) {
+      this.moktakAudio.pause();
+      this.moktakAudio.currentTime = 0;
+    }
+  }
+
+  toggleYoryeongLoop(callback) {
+    this.resume();
+    if (this.isYoryeongLooping) {
+      this.stopYoryeongLoop();
+      if (callback) callback(false);
+      return false;
+    } else {
+      this.stopMoktakLoop();
+      this.stopWindChimeLoop();
+      this.isYoryeongLooping = true;
+      if (this.yoryeongAudio) {
+        this.yoryeongAudio.currentTime = 0;
+        this.yoryeongAudio.volume = 0.85;
+        this.yoryeongAudio.muted = this.isMuted;
+        this.yoryeongAudio.play().catch(() => {});
+      }
+      if (callback) callback(true);
+      return true;
+    }
+  }
+
+  stopYoryeongLoop() {
+    this.isYoryeongLooping = false;
+    if (this.yoryeongAudio) {
+      this.yoryeongAudio.pause();
+      this.yoryeongAudio.currentTime = 0;
+    }
+  }
+
+  toggleWindChimeLoop(callback) {
+    this.resume();
+    if (this.isWindChimeLooping) {
+      this.stopWindChimeLoop();
+      if (callback) callback(false);
+      return false;
+    } else {
+      this.stopMoktakLoop();
+      this.stopYoryeongLoop();
+      this.isWindChimeLooping = true;
+      this.playWindChime();
+      this.windChimeInterval = setInterval(() => {
+        this.playWindChime();
+      }, 3600);
+      if (callback) callback(true);
+      return true;
+    }
+  }
+
+  stopWindChimeLoop() {
+    this.isWindChimeLooping = false;
+    if (this.windChimeInterval) {
+      clearInterval(this.windChimeInterval);
+      this.windChimeInterval = null;
     }
   }
 
@@ -219,10 +318,43 @@ class TempleAudio {
     noise.start(t);
   }
 
-  // [요청 반영] 차임벨 소리 완전 비활성화 (싱잉볼 및 목탁/범종만 허용)
+  // 산령각 청아한 처마 풍경소리
   playWindChime() {
-    // 차임벨 소리 제거: 사용자가 원하지 않으므로 무음 처리 또는 은은한 싱잉볼로 대체
-    this.playSingingBowl();
+    this.resume();
+    if (this.isMuted) return;
+
+    const now = this.ctx.currentTime;
+    const strikes = [
+      { delay: 0.00, baseFreq: 1318.5, gain: 0.24, decay: 3.4 },
+      { delay: 0.34, baseFreq: 1760.0, gain: 0.19, decay: 2.9 },
+      { delay: 0.78, baseFreq: 1567.98, gain: 0.16, decay: 3.2 }
+    ];
+
+    strikes.forEach((s) => {
+      const start = now + s.delay;
+      const partials = [
+        { mult: 1.0, amp: 1.0, decay: s.decay },
+        { mult: 2.02, amp: 0.42, decay: s.decay * 0.7 },
+        { mult: 2.76, amp: 0.22, decay: s.decay * 0.5 }
+      ];
+
+      partials.forEach((p) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(s.baseFreq * p.mult, start);
+
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(s.gain * p.amp, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + p.decay);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(start);
+        osc.stop(start + p.decay + 0.05);
+      });
+    });
   }
 
   playFootstep(isStone = false) {
@@ -291,27 +423,32 @@ class TempleAudio {
     windSource.start();
     this.ambientNodes.push(windSource, windGain);
 
-    // [요청 반영] 산속 느낌이 물씬 나는 맑고 고요한 새소리 간헐적 재생
+    // [요청 반영] 도량에 들어서자마자 맑고 고요한 새소리가 즉시 들리고, 이후 자연스럽게 이어지도록 재생
+    setTimeout(() => {
+      if (this.isAmbientPlaying && !this.isMuted) {
+        this.playBirdChirp();
+      }
+    }, 250);
     this.scheduleNextBirdChirp();
   }
 
   playBirdChirp() {
     if (!this.ctx || this.isMuted) return;
     const t = this.ctx.currentTime;
-    // 2~3회 연속으로 청아하게 지저귀는 산새 소리
+    // 2~4회 연속으로 청아하게 지저귀는 산새 소리
     const chirpCount = Math.floor(Math.random() * 3) + 2;
-    const baseFreq = 2600 + Math.random() * 900; // 2600 ~ 3500Hz 맑은 숲속 새 음역대
+    const baseFreq = 2400 + Math.random() * 950; // 2400 ~ 3350Hz 맑은 숲속 새 음역대
 
     for (let i = 0; i < chirpCount; i++) {
-      const startTime = t + i * (0.11 + Math.random() * 0.05);
-      const dur = 0.08 + Math.random() * 0.04;
+      const startTime = t + i * (0.12 + Math.random() * 0.05);
+      const dur = 0.09 + Math.random() * 0.04;
 
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
       osc.type = 'sine';
       const f1 = baseFreq * (0.92 + Math.random() * 0.15);
-      const f2 = f1 * (1.28 + Math.random() * 0.35);
+      const f2 = f1 * (1.28 + Math.random() * 0.32);
       const f3 = f1 * (1.05 + Math.random() * 0.15);
 
       osc.frequency.setValueAtTime(f1, startTime);
@@ -319,7 +456,7 @@ class TempleAudio {
       osc.frequency.exponentialRampToValueAtTime(f3, startTime + dur);
 
       gain.gain.setValueAtTime(0.0001, startTime);
-      gain.gain.linearRampToValueAtTime(0.045, startTime + dur * 0.25);
+      gain.gain.linearRampToValueAtTime(0.075, startTime + dur * 0.25);
       gain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
 
       osc.connect(gain);
@@ -332,7 +469,7 @@ class TempleAudio {
 
   scheduleNextBirdChirp() {
     if (!this.isAmbientPlaying) return;
-    const nextDelay = 3500 + Math.random() * 4500; // 3.5 ~ 8초 주기
+    const nextDelay = 2600 + Math.random() * 3400; // 2.6 ~ 6초 주기로 생기 있게 지저귐
     this.birdTimeout = setTimeout(() => {
       if (this.isAmbientPlaying) {
         this.playBirdChirp();
@@ -354,6 +491,69 @@ class TempleAudio {
     if (this.isAmbientPlaying && !this.birdTimeout) {
       this.scheduleNextBirdChirp();
     }
+  }
+
+  // [관욕식 맑은 청수 감로수 물소리 효과음]
+  playWaterPour() {
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const dur = 2.4;
+
+    // 흐르는 물줄기 핑크 노이즈 버퍼
+    const bufSize = Math.floor(this.ctx.sampleRate * dur);
+    const buffer = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < bufSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      data[i] = (b0 + b1 + b2) * 0.28 * Math.sin((i / bufSize) * Math.PI);
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(950, t);
+    filter.frequency.linearRampToValueAtTime(1400, t + dur * 0.5);
+    filter.frequency.linearRampToValueAtTime(800, t + dur);
+    filter.Q.setValueAtTime(3.2, t);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.24, t + 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(t);
+    noise.stop(t + dur);
+
+    // 맑은 물방울(또르르) 톤
+    [0.2, 0.55, 0.9, 1.3, 1.7].forEach((delay, idx) => {
+      const osc = this.ctx.createOscillator();
+      const dropGain = this.ctx.createGain();
+      const st = t + delay;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200 + idx * 160, st);
+      osc.frequency.exponentialRampToValueAtTime(650 + idx * 80, st + 0.12);
+
+      dropGain.gain.setValueAtTime(0.06, st);
+      dropGain.gain.exponentialRampToValueAtTime(0.0001, st + 0.12);
+
+      osc.connect(dropGain);
+      dropGain.connect(this.masterGain);
+
+      osc.start(st);
+      osc.stop(st + 0.13);
+    });
   }
 
   stopAmbient() {

@@ -58,23 +58,15 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
-.splash-temple-svg {
-  width: 165px;
+.splash-temple-svg,
+.splash-lotus-svg {
+  width: 196px;
+  max-width: 72vw;
   height: auto;
-  filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.25));
-}
-
-.splash-lotus-emblem {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: #fffcf5;
-  border: 1.5px solid #d4af37;
-  margin-top: -12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  filter: drop-shadow(0 6px 22px rgba(0, 0, 0, 0.55));
 }
 
 .splash-title {
@@ -294,6 +286,39 @@ body.in-meditation .control-hint {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+body.beomjong-ready .control-hint {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.bell-return-btn {
+  position: absolute;
+  bottom: 86px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  padding: 9px 26px;
+  background: rgba(14, 17, 22, 0.92);
+  backdrop-filter: blur(12px);
+  color: #ffd966;
+  border: 1.5px solid rgba(212, 175, 55, 0.75);
+  border-radius: 24px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+  transition: all 0.2s ease;
+}
+
+.bell-return-btn:hover,
+.bell-return-btn:active {
+  background: rgba(212, 175, 55, 0.22);
+  color: #fff;
+  transform: translateX(-50%) scale(0.98);
+}
+
 /* 전각 근접 팝업 안내: [사용자 요청 반영: 거대하고 어두운 박스를 없애고 뒤의 탑과 전각이 100% 보이도록 투명화] */
 .location-card {
   position: absolute;
@@ -357,14 +382,23 @@ body.in-meditation .control-hint {
   color: #ffffff;
   margin: 4px auto 14px;
   max-width: 380px;
+  white-space: pre-line;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+.location-card-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .enter-btn {
   width: auto;
-  min-width: 220px;
+  min-width: 185px;
   max-width: 280px;
-  margin: 0 auto;
+  margin: 0;
   padding: 10px 22px;
   background: linear-gradient(135deg, #d4af37 0%, #aa8422 100%);
   color: #141414;
@@ -382,8 +416,45 @@ body.in-meditation .control-hint {
   transition: all 0.2s;
 }
 
+.bell-stop-btn {
+  padding: 10px 20px;
+  background: rgba(26, 28, 34, 0.88);
+  color: #f4f1ea;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 25px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  transition: all 0.2s;
+}
+
+.bell-stop-btn:active {
+  transform: scale(0.98);
+}
+
 .enter-btn:active {
   transform: scale(0.98);
+}
+
+.gwanyok-meditation-msg {
+  margin: 10px auto 0;
+  padding: 7px 16px;
+  max-width: 340px;
+  background: rgba(15, 17, 22, 0.72);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-radius: 14px;
+  color: #fff6df;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
 }
 
 /* 전각 내부 명상 모드 오버레이 */
@@ -484,25 +555,104 @@ body.in-meditation .control-hint {
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.85);
 }
 
-/* 현재 등록된 발원문 표시 배지: [사용자 요청 반영: 1줄 '🪷 나의 발원', 2줄 ':' 및 '"' 없이 글만 표출] */
+/* 현재 등록된 발원문 표시 배지: [사용자 요청 반영: 다중 발원문 추가 지원 & 마우스 오버 시 발원문 변경 / 등 끄기 가능] */
 .active-prayer-badge {
   display: none;
-  background: rgba(22, 18, 14, 0.82);
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 6px 16px;
-  border-radius: 14px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
   margin-top: 6px;
   font-family: 'Noto Serif KR', serif;
-  max-width: 90vw;
+  max-width: 94vw;
   text-align: center;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  pointer-events: auto;
 }
 
 .active-prayer-badge.visible {
+  display: flex;
+}
+
+.prayer-badge-item {
+  position: relative;
+  background: rgba(22, 18, 14, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.48);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 7px 16px;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.prayer-badge-item:hover {
+  border-color: rgba(255, 215, 102, 0.85);
+  background: rgba(28, 23, 18, 0.95);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.75);
+}
+
+.prayer-badge-actions {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.prayer-badge-item.show-actions .prayer-badge-actions {
+  display: flex;
+}
+
+@media (hover: hover) {
+  .prayer-badge-item:hover .prayer-badge-actions {
+    display: flex;
+  }
+}
+
+.prayer-action-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: #ffe8a3;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.prayer-action-btn:hover {
+  background: rgba(212, 175, 55, 0.32);
+  color: #ffffff;
+  border-color: #ffd766;
+}
+
+.prayer-action-btn.turn-off:hover {
+  background: rgba(180, 60, 60, 0.45);
+  border-color: #ff9999;
+  color: #ffffff;
+}
+
+/* 하얀 연꽃 로고 및 회색 석굴 아이콘 공통 SVG */
+.white-lotus-icon,
+.gray-cave-icon {
   display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.18em;
+  margin-right: 4px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
 }
 
 .prayer-badge-title {
@@ -510,6 +660,10 @@ body.in-meditation .control-hint {
   font-weight: 700;
   color: #ffd766;
   margin-bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .prayer-badge-text {
@@ -978,4 +1132,43 @@ body.in-meditation .control-hint {
     padding: 6px 10px;
     font-size: 0.82rem;
   }
+}
+
+/* 음원 출처 및 저작권 안내 모달 */
+.credit-modal {
+  max-width: 440px;
+}
+
+.credit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 18px;
+  text-align: left;
+}
+
+.credit-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.credit-item strong {
+  display: block;
+  color: #ffd966;
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+}
+
+.credit-item p {
+  margin: 2px 0;
+  font-size: 0.82rem;
+  color: #e9e2d3;
+  line-height: 1.45;
+}
+
+.credit-item a {
+  color: #f6d575;
+  text-decoration: underline;
 }

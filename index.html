@@ -21,25 +21,27 @@
   </script>
 </head>
 <body>
-  <!-- [사용자 요청 반영: 대문 진입 전 정지화면 스플래시 (전각 일러스트 + 절로 절로 저 절로 / 도심속 / 천년고찰 / 비구니 사찰입니다.)] -->
+  <!-- [사용자 요청 반영: 초기 화면의 동그란 안의 로고가 기와 모양의 지붕 아래에 '절로 절로 저 절로'가 들어가도록 구성] -->
   <div id="splash-overlay" class="splash-overlay">
     <div class="splash-content">
       <div class="splash-temple-art">
-        <svg viewBox="0 0 180 130" class="splash-temple-svg" xmlns="http://www.w3.org/2000/svg">
-          <path d="M46 42 Q90 36 134 42" stroke="#d4af37" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-          <path d="M18 68 Q40 58 48 40 L132 40 Q140 58 162 68 Q128 73 90 73 Q52 73 18 68 Z" stroke="#d4af37" stroke-width="3" fill="rgba(212, 175, 55, 0.08)" stroke-linejoin="round"/>
-          <path d="M12 63 Q18 69 26 69" stroke="#d4af37" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M168 63 Q162 69 154 69" stroke="#d4af37" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <rect x="44" y="73" width="92" height="44" stroke="#d4af37" stroke-width="2.8" fill="rgba(20, 22, 26, 0.6)" rx="2"/>
-          <line x1="62" y1="73" x2="62" y2="117" stroke="#d4af37" stroke-width="2"/>
-          <line x1="118" y1="73" x2="118" y2="117" stroke="#d4af37" stroke-width="2"/>
-          <rect x="78" y="83" width="24" height="34" stroke="#d4af37" stroke-width="2" fill="rgba(212, 175, 55, 0.06)"/>
-          <line x1="90" y1="83" x2="90" y2="117" stroke="#d4af37" stroke-width="1.5"/>
-          <line x1="34" y1="119" x2="146" y2="119" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+        <svg viewBox="0 0 260 260" class="splash-lotus-svg" xmlns="http://www.w3.org/2000/svg">
+          <!-- 바깥 은은한 금빛 테두리 후광 (8엽 구름/연꽃 원형) -->
+          <path d="M 96 28 A 40 40 0 0 1 164 28 A 40 40 0 0 1 212 48 A 40 40 0 0 1 232 96 A 40 40 0 0 1 232 164 A 40 40 0 0 1 212 212 A 40 40 0 0 1 164 232 A 40 40 0 0 1 96 232 A 40 40 0 0 1 48 212 A 40 40 0 0 1 28 164 A 40 40 0 0 1 28 96 A 40 40 0 0 1 48 48 Z"
+                fill="#ffffff" stroke="rgba(218, 190, 125, 0.55)" stroke-width="11" stroke-linejoin="round"/>
+          <!-- 동그란 8엽 연꽃/구름 하얀 바탕과 진갈색 테두리 -->
+          <path d="M 96 28 A 40 40 0 0 1 164 28 A 40 40 0 0 1 212 48 A 40 40 0 0 1 232 96 A 40 40 0 0 1 232 164 A 40 40 0 0 1 212 212 A 40 40 0 0 1 164 232 A 40 40 0 0 1 96 232 A 40 40 0 0 1 48 212 A 40 40 0 0 1 28 164 A 40 40 0 0 1 28 96 A 40 40 0 0 1 48 48 Z"
+                fill="#ffffff" stroke="#26201b" stroke-width="6.5" stroke-linejoin="round"/>
+          <!-- 내부 기와 모양의 지붕과 전각 몸체 -->
+          <path d="M 95 72 Q 130 77 165 72 C 178 96 196 112 212 120 C 202 124 192 124 184 123 L 184 190 L 76 190 L 76 123 C 68 124 58 124 48 120 C 64 112 82 96 95 72 Z"
+                fill="#fbf5e3" stroke="#26201b" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>
+          <!-- 기와 모양 지붕 아래 금빛 구분선 -->
+          <line x1="83" y1="124" x2="177" y2="124" stroke="#c8a456" stroke-width="4" stroke-linecap="round"/>
+          <!-- 기와 모양의 지붕 아래 첫째 줄 '절로 절로', 다음 줄 '저 절로' 표시 -->
+          <text x="130" y="151" text-anchor="middle" fill="#1e1814" font-family="'Noto Serif KR', serif" font-size="18.5" font-weight="900" letter-spacing="0.5">절로 절로</text>
+          <text x="130" y="176" text-anchor="middle" fill="#1e1814" font-family="'Noto Serif KR', serif" font-size="21" font-weight="900" letter-spacing="1.2">저 절로</text>
         </svg>
-        <img src="icon.png" class="splash-lotus-emblem" alt="저 절로 로고">
       </div>
-      <h1 class="splash-title">절로 절로 저 절로</h1>
       <div class="splash-lines">
         <p>도심속</p>
         <p>천년고찰</p>
@@ -51,15 +53,16 @@
   <!-- 3D 캔버스 컨테이너 -->
   <div id="canvas-container"></div>
 
-  <!-- 상단 헤더 -->
+  <!-- 상단 헤더 ('저 절로' 앞에 흰 동그라미 로고 복원) -->
   <header>
     <div class="title-area">
-      <img src="icon.png" class="header-logo" alt="저 절로 로고">
+      <img src="icon.png" alt="저 절로 로고" class="header-logo">
       <h1>저 절로 <span>도심속 쉼과 명상</span></h1>
     </div>
     <div class="header-actions">
       <button id="mute-btn" class="icon-btn" title="소리 켜기/끄기">🔔</button>
       <button id="fullscreen-btn" class="icon-btn" title="전체화면">⛶</button>
+      <button id="credit-btn" class="icon-btn" title="음원 출처 및 저작권 안내">ⓘ</button>
     </div>
   </header>
 
@@ -70,12 +73,15 @@
 
   <!-- 전각 근접 팝업 카드 -->
   <div id="location-card" class="location-card">
-    <div id="location-tag" class="location-card-tag">경내 안내</div>
+    <div id="location-tag" class="location-card-tag" style="display: none;"></div>
     <h2 id="location-title">대웅전</h2>
     <p id="location-desc">대웅전에 대한 설명이 표시됩니다.</p>
-    <button id="enter-btn" class="enter-btn">
-      <span>🚪</span> 전각 안으로 입장하기
-    </button>
+    <div class="location-card-actions">
+      <button id="enter-btn" class="enter-btn">
+        <span>🚪</span> 전각 안으로 입장하기
+      </button>
+    </div>
+    <div id="gwanyok-meditation-msg" class="gwanyok-meditation-msg" style="display: none;"></div>
   </div>
 
   <!-- 전각 내부 명상 모드 오버레이 -->
@@ -131,7 +137,8 @@
           <span id="instrument-text">싱잉볼 치기</span>
         </button>
         <button id="open-prayer-btn" class="control-grid-btn prayer-wide-btn">
-          <span>🪷 마음 발원문</span>
+          <svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>
+          <span id="open-prayer-text">마음 발원문</span>
         </button>
         <button id="exit-btn" class="exit-btn">
           마당으로
@@ -143,28 +150,57 @@
   <!-- 발원문 작성 팝업 모달 -->
   <div id="prayer-modal-overlay" class="prayer-modal-overlay">
     <div class="prayer-modal">
-      <h3 id="prayer-modal-title">🪷 발원문(發願文)</h3>
-      <p>도량에 머무는 지금, 간절한 소원이나 내려놓고 싶은 마음을 진솔하게 적어보세요.</p>
+      <h3 id="prayer-modal-title"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#b38f40" stroke-width="1.1" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 발원문(發願文)</h3>
+      <p id="prayer-modal-desc">도량에 머무는 지금, 간절한 소원이나 내려놓고 싶은 마음을 진솔하게 적어보세요.</p>
       <textarea id="prayer-input" class="prayer-textarea" placeholder="예: 가족의 건강과 평온을 발원하며, 마음에 깃든 불안을 모두 비워냅니다..."></textarea>
       <div class="prayer-modal-actions">
-        <button id="prayer-submit-btn" class="prayer-submit-btn">🪷 정성으로 발원 올리기</button>
+        <button id="prayer-submit-btn" class="prayer-submit-btn"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 정성으로 발원 올리기</button>
         <button id="prayer-cancel-btn" class="prayer-cancel-btn">닫기</button>
       </div>
     </div>
   </div>
 
-  <!-- 하단 랜드마크 내비게이션 바 -->
+  <!-- 음원 출처 및 저작권 안내 모달 -->
+  <div id="credit-modal-overlay" class="prayer-modal-overlay">
+    <div class="prayer-modal credit-modal">
+      <h3>음원 출처 및 저작권 안내</h3>
+      <div class="credit-list">
+        <div class="credit-item">
+          <strong>목탁 소리 (원제: 목탁3)</strong>
+          <p>저작자: 김용배 · 출처: <a href="https://gongu.copyright.or.kr/gongu/wrt/wrt/view.do?menuNo=200020&wrtSn=13253417" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a></p>
+          <p>라이선스: <a href="https://creativecommons.org/licenses/by/4.0/deed.ko" target="_blank" rel="noopener noreferrer">CC BY 4.0 (저작자표시)</a></p>
+        </div>
+        <div class="credit-item">
+          <strong>요령·기타 사찰 음원</strong>
+          <p>출처: <a href="https://gongu.copyright.or.kr/" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (CC BY 4.0 이용허락 조건 준수)</p>
+        </div>
+      </div>
+      <div class="prayer-modal-actions">
+        <button id="credit-close-btn" class="prayer-cancel-btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 범종 타종 시 하단 '제자리로' 메뉴 -->
+  <button id="bell-return-btn" class="bell-return-btn" style="display: none;">제자리로</button>
+
+  <!-- 하단 랜드마크 내비게이션 바 (요청 순서: 입구, 관욕식, 대웅전, 탑전, 석굴암, 산령각, 범종, 지장전, 불사중 건물) -->
   <nav id="bottom-nav" class="bottom-nav-container">
-    <button class="nav-pill" data-id="hojimun">🚪 대문(입구)</button>
-    <button class="nav-pill" data-id="pagoda">🗼 묘보탑(9층탑)</button>
+    <button class="nav-pill active" data-id="hojimun">🚪 입장</button>
+    <button class="nav-pill" data-id="gwanyok">💧 관욕식</button>
     <button class="nav-pill" data-id="daewoong">🏛️ 대웅전</button>
-    <button class="nav-pill" data-id="sansin">🌲 산신각</button>
-    <button class="nav-pill" data-id="seokguram">🪨 석굴암</button>
+    <button class="nav-pill" data-id="pagoda">🗼 탑전</button>
+    <button class="nav-pill" data-id="seokguram"><svg class="gray-cave-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#9aa0a8" stroke="#5a6068" stroke-width="1.4" stroke-linejoin="round" d="M2 20 C2 10 6.5 4 12 4 C17.5 4 22 10 22 20 Z"/><path fill="#32363d" d="M6.5 20 C6.5 13 9 9.5 12 9.5 C15 9.5 17.5 13 17.5 20 Z"/></svg> 석굴암</button>
+    <button class="nav-pill" data-id="sansin">🌲 산령각</button>
+    <button class="nav-pill" data-id="beomjong">🔔 범종</button>
+    <button class="nav-pill" data-id="jijang"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 지장전</button>
+    <button class="nav-pill" data-id="bulsa">🪵 불사중 건물</button>
   </nav>
 
   <!-- 스크립트 연결 -->
   <script src="audio.js"></script>
   <script src="daewoong_asset.js"></script>
+  <script src="jijang_asset.js"></script>
   <script src="sansin_asset.js"></script>
   <script src="seokguram_asset.js"></script>
   <script src="temple3d.js"></script>

@@ -9,3 +9,7 @@
 - **호흡 명상**: 들이마시고 내쉬는 리듬에 맞춘 고요한 마음챙김 명상
 - **마음 발원문**: 소원을 작성하고 법당에 올리기
 - **모바일 완벽 지원**: 스마트폰 터치 조작 및 PWA(홈 화면에 추가) 지원
+
+## 음원 출처 및 저작권 표기
+- **목탁 소리 (`목탁소리.mp3`, 원제: 목탁3)**: 김용배 / 출처: [한국저작권위원회 공유마당](https://gongu.copyright.or.kr/gongu/wrt/wrt/view.do?menuNo=200020&wrtSn=13253417) / 라이선스: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ko)
+- **요령·기타 사찰 음원 (`요령.mp3` 등)**: 출처: [한국저작권위원회 공유마당](https://gongu.copyright.or.kr/) / 라이선스: CC BY 4.0 이용허락 조건 준수
