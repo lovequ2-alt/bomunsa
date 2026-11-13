@@ -162,6 +162,45 @@ class TempleAudio {
     source.start(this.ctx.currentTime);
   }
 
+  async loadMoktakMp3Buffer() {
+    if (this.moktakMp3Buffer || !this.ctx) return this.moktakMp3Buffer;
+    try {
+      const res = await fetch('목탁소리.mp3');
+      if (!res.ok) throw new Error('fetch failed');
+      const arr = await res.arrayBuffer();
+      this.moktakMp3Buffer = await this.ctx.decodeAudioData(arr);
+      return this.moktakMp3Buffer;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  playMoktakBufferLoop(buffer) {
+    if (!this.isMoktakLooping || !this.ctx || !buffer) return;
+    if (this.moktakBufferSource) {
+      try { this.moktakBufferSource.stop(); } catch (e) {}
+      this.moktakBufferSource = null;
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+
+    const boostGain = this.ctx.createGain();
+    // masterGain(0.85)을 감안하여 순수 출력이 약 5배 이상(6.0 * 0.85 = 5.1배) 되도록 증폭
+    boostGain.gain.setValueAtTime(6.0, this.ctx.currentTime);
+
+    const compressor = this.ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-2, this.ctx.currentTime);
+    compressor.knee.setValueAtTime(6, this.ctx.currentTime);
+    compressor.ratio.setValueAtTime(3, this.ctx.currentTime);
+
+    src.connect(boostGain);
+    boostGain.connect(compressor);
+    compressor.connect(this.masterGain);
+    src.start(0);
+    this.moktakBufferSource = src;
+  }
+
   toggleMoktakLoop(callback) {
     this.resume();
     if (this.isMoktakLooping) {
@@ -172,40 +211,33 @@ class TempleAudio {
       this.stopYoryeongLoop();
       this.stopWindChimeLoop();
       this.isMoktakLooping = true;
-      if (this.moktakAudio) {
-        if (!this.moktakSourceConnected && this.ctx && typeof this.ctx.createMediaElementSource === 'function') {
-          try {
-            const src = this.ctx.createMediaElementSource(this.moktakAudio);
-            const boostGain = this.ctx.createGain();
-            // masterGain(0.85)을 감안하여 순수 출력이 약 5배 이상(6.0 * 0.85 = 5.1배) 되도록 증폭
-            boostGain.gain.setValueAtTime(6.0, this.ctx.currentTime);
-            const compressor = this.ctx.createDynamicsCompressor();
-            compressor.threshold.setValueAtTime(-2, this.ctx.currentTime);
-            compressor.knee.setValueAtTime(6, this.ctx.currentTime);
-            compressor.ratio.setValueAtTime(3, this.ctx.currentTime);
-            src.connect(boostGain);
-            boostGain.connect(compressor);
-            compressor.connect(this.masterGain);
-            this.moktakSourceConnected = true;
-          } catch (e) {
-            // file:// 환경 등에서 MediaElementSource 연결 제한 시 기본 오디오 출력 사용
-          }
-        }
-        this.moktakAudio.currentTime = 0;
-        this.moktakAudio.volume = 1.0;
-        this.moktakAudio.muted = this.isMuted;
-        this.moktakAudio.loop = true;
-        const p = this.moktakAudio.play();
-        if (p && typeof p.catch === 'function') {
-          p.catch(() => {
-            if (!this.isMoktakLooping) return;
+
+      if (this.moktakMp3Buffer) {
+        this.playMoktakBufferLoop(this.moktakMp3Buffer);
+      } else {
+        this.loadMoktakMp3Buffer().then((buf) => {
+          if (!this.isMoktakLooping) return;
+          if (buf) {
+            this.playMoktakBufferLoop(buf);
+          } else if (this.moktakAudio) {
+            // file:// 환경 등에서 fetch 불가 시 MediaElementSource 없이 직접 재생(무음 방지)
+            this.moktakAudio.currentTime = 0;
+            this.moktakAudio.volume = 1.0;
+            this.moktakAudio.muted = this.isMuted;
+            this.moktakAudio.loop = true;
+            const p = this.moktakAudio.play();
+            if (p && typeof p.catch === 'function') {
+              p.catch(() => {
+                if (!this.isMoktakLooping) return;
+                this.playSingleMoktak();
+                this.moktakInterval = setInterval(() => this.playSingleMoktak(), 1250);
+              });
+            }
+          } else {
             this.playSingleMoktak();
             this.moktakInterval = setInterval(() => this.playSingleMoktak(), 1250);
-          });
-        }
-      } else {
-        this.playSingleMoktak();
-        this.moktakInterval = setInterval(() => this.playSingleMoktak(), 1250);
+          }
+        });
       }
       if (callback) callback(true);
       return true;
@@ -214,6 +246,10 @@ class TempleAudio {
 
   stopMoktakLoop() {
     this.isMoktakLooping = false;
+    if (this.moktakBufferSource) {
+      try { this.moktakBufferSource.stop(); } catch (e) {}
+      this.moktakBufferSource = null;
+    }
     if (this.moktakInterval) {
       clearInterval(this.moktakInterval);
       this.moktakInterval = null;
