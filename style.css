@@ -6,6 +6,8 @@
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 body, html {
@@ -17,6 +19,8 @@ body, html {
   background-color: #0d0f12;
   font-family: 'Pretendard', -apple-system, sans-serif;
   color: #f7f6f2;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* [사용자 요청 반영: 대문 진입 전 고즈넉한 정지 스플래시 화면] */
@@ -152,6 +156,7 @@ header * {
   font-family: 'Noto Serif KR', serif;
   font-size: 1.25rem;
   font-weight: 700;
+  line-height: 1.25;
   letter-spacing: -0.02em;
   color: #ffffff;
   text-shadow: 0 2px 6px rgba(0,0,0,0.8);
