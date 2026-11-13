@@ -205,11 +205,13 @@ class TempleSync {
     }
   }
 
-  broadcastState(state) {
+  broadcastState(state, force = false) {
     if (!this.isConfigured || !this.channel || this.isObserverOnly) return;
     const now = performance.now();
-    if (state.isWalking && now - this.lastBroadcastTime < 120) return;
-    if (!state.isWalking && now - this.lastBroadcastTime < 60) return;
+    if (!force) {
+      if (state.isWalking && now - this.lastBroadcastTime < 120) return;
+      if (!state.isWalking && now - this.lastBroadcastTime < 60) return;
+    }
     this.lastBroadcastTime = now;
 
     this.channel.send({

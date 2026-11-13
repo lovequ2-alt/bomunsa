@@ -4681,6 +4681,16 @@ class Bomunsa3D {
     if (this.sansinGroup) this.sansinGroup.visible = (enterType === 'sansin');
 
     if (this.insideGroup) this.insideGroup.visible = true;
+    if (this.characterGroup) this.characterGroup.visible = false;
+    if (window.templeSync) {
+      window.templeSync.broadcastState({
+        x: this.playerPos.x,
+        z: this.playerPos.z,
+        rotY: this.currentCharRotation,
+        isWalking: false,
+        mode: this.currentMode
+      }, true);
+    }
 
     // [사용자 요청: 처음에 들어가면 향과 초가 안 켜진 상태로 시작]
     this.isCandleLit = false;
@@ -4720,6 +4730,16 @@ class Bomunsa3D {
     this.insideCandleLight.intensity = 0;
 
     if (this.insideGroup) this.insideGroup.visible = false;
+    if (this.characterGroup) this.characterGroup.visible = true;
+    if (window.templeSync) {
+      window.templeSync.broadcastState({
+        x: this.playerPos.x,
+        z: this.playerPos.z,
+        rotY: this.currentCharRotation,
+        isWalking: false,
+        mode: 'outside'
+      }, true);
+    }
 
     this.isCandleLit = false;
     this.isIncenseLit = false;
@@ -5213,7 +5233,8 @@ class Bomunsa3D {
     const placedPositions = [{ x: this.playerPos.x, z: this.playerPos.z }];
 
     this.remotePilgrims.forEach((entry, cid) => {
-      const shouldShow = showInYard && entry.mode !== 'inside';
+      const isRemoteInside = Boolean(entry.mode && entry.mode.startsWith('inside'));
+      const shouldShow = showInYard && !isRemoteInside;
       entry.group.visible = shouldShow;
       if (!shouldShow) return;
 
