@@ -153,7 +153,7 @@ class TempleAudio {
     filter.frequency.setValueAtTime(3600, this.ctx.currentTime);
 
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.95, this.ctx.currentTime);
+    gain.gain.setValueAtTime(1.85, this.ctx.currentTime);
 
     source.connect(filter);
     filter.connect(gain);
@@ -173,8 +173,24 @@ class TempleAudio {
       this.stopWindChimeLoop();
       this.isMoktakLooping = true;
       if (this.moktakAudio) {
+        if (!this.moktakSourceConnected && this.ctx && typeof this.ctx.createMediaElementSource === 'function') {
+          try {
+            const src = this.ctx.createMediaElementSource(this.moktakAudio);
+            const boostGain = this.ctx.createGain();
+            boostGain.gain.setValueAtTime(3.0, this.ctx.currentTime);
+            const compressor = this.ctx.createDynamicsCompressor();
+            compressor.threshold.setValueAtTime(-10, this.ctx.currentTime);
+            compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+            src.connect(boostGain);
+            boostGain.connect(compressor);
+            compressor.connect(this.masterGain);
+            this.moktakSourceConnected = true;
+          } catch (e) {
+            // file:// 환경 등에서 MediaElementSource 연결 제한 시 기본 오디오 출력 사용
+          }
+        }
         this.moktakAudio.currentTime = 0;
-        this.moktakAudio.volume = 0.85;
+        this.moktakAudio.volume = 1.0;
         this.moktakAudio.muted = this.isMuted;
         this.moktakAudio.loop = true;
         const p = this.moktakAudio.play();
