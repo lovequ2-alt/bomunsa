@@ -33,6 +33,7 @@ class TempleSync {
     this.onPresenceChange = null;
     this.onRemoteStatesChange = null;
     this.onPrayersUpdated = null;
+    this.onGreeting = null;
 
     if (this.isConfigured) {
       try {
@@ -109,6 +110,13 @@ class TempleSync {
           if (this.onRemoteStatesChange) {
             this.onRemoteStatesChange(this.remoteStates);
           }
+        }
+      })
+      .on('broadcast', { event: 'greet' }, ({ payload }) => {
+        if (!payload || payload.fromClientId === this.clientId) return;
+        if (payload.targetClientId && payload.targetClientId !== this.clientId) return;
+        if (this.onGreeting) {
+          this.onGreeting(payload.fromClientId);
         }
       })
       .subscribe(async (status) => {
@@ -233,6 +241,18 @@ class TempleSync {
         busyLoc: state.busyLoc || null,
         queueLoc: state.queueLoc || null,
         queuedAt: state.queuedAt || null
+      }
+    });
+  }
+
+  sendGreeting(targetClientId = null) {
+    if (!this.isConfigured || !this.channel || this.isObserverOnly) return;
+    this.channel.send({
+      type: 'broadcast',
+      event: 'greet',
+      payload: {
+        fromClientId: this.clientId,
+        targetClientId
       }
     });
   }

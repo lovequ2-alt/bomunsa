@@ -52,6 +52,8 @@ class Bomunsa3D {
     this.lastBusyLoc = null;
     this.lastQueueKey = null;
     this.lastOccupiedState = false;
+    this.localGreetTimer = 0;
+    this.lastNearbyPilgrimId = null;
     this.remoteRobePalette = [
       0x74828f, 0x8d8274, 0x6f8076, 0x8b7b84, 0x7a7f8c,
       0x8e8670, 0x6c7a89, 0x857468, 0x76857d
@@ -5319,6 +5321,16 @@ class Bomunsa3D {
       }
     }
 
+    // 내 캐릭터 합장 인사(반배) 애니메이션
+    if (this.localGreetTimer > 0 && this.charLimbs && this.charLimbs.upperBody && this.currentMode === 'outside' && !this.isGwanyokActive && !this.isBeomjongRinging) {
+      this.localGreetTimer = Math.max(0, this.localGreetTimer - delta);
+      const progress = 1 - (this.localGreetTimer / 1.2);
+      this.charLimbs.upperBody.rotation.x = Math.sin(progress * Math.PI) * 0.48;
+      if (this.localGreetTimer === 0) {
+        this.charLimbs.upperBody.rotation.x = 0;
+      }
+    }
+
     // 실시간 동시접속 참배객 위치/동작 보간 및 내 위치 전송
     this.updateRemotePilgrims(delta);
     this.checkWaitingTurn();
@@ -5599,9 +5611,61 @@ class Bomunsa3D {
         if (entry.limbs.upperBody) {
           entry.limbs.upperBody.position.set(0, 0.28, 0);
           entry.limbs.upperBody.rotation.z = 0;
+          if (entry.greetTimer && entry.greetTimer > 0) {
+            entry.greetTimer = Math.max(0, entry.greetTimer - delta);
+            const p = 1 - (entry.greetTimer / 1.2);
+            entry.limbs.upperBody.rotation.x = Math.sin(p * Math.PI) * 0.48;
+            if (entry.greetTimer === 0) entry.limbs.upperBody.rotation.x = 0;
+          } else {
+            entry.limbs.upperBody.rotation.x = 0;
+          }
         }
       }
     });
+
+    // 마당에서 가장 가까운 다른 참배객(2.8m 이내) 감지하여 합장 인사 버튼 표시
+    let nearestCid = null;
+    if (this.currentMode === 'outside' && !this.isWalking) {
+      let minDist = 2.8;
+      this.remotePilgrims.forEach((entry, cid) => {
+        if (!entry.group.visible) return;
+        const d = Math.hypot(entry.group.position.x - this.playerPos.x, entry.group.position.z - this.playerPos.z);
+        if (d < minDist) {
+          minDist = d;
+          nearestCid = cid;
+        }
+      });
+    }
+    if (nearestCid !== this.lastNearbyPilgrimId) {
+      this.lastNearbyPilgrimId = nearestCid;
+      if (window.onNearbyPilgrimChanged) {
+        window.onNearbyPilgrimChanged(nearestCid);
+      }
+    }
+  }
+
+  performLocalGreeting(targetCid) {
+    if (this.currentMode !== 'outside') return;
+    if (targetCid && this.remotePilgrims && this.remotePilgrims.has(targetCid)) {
+      const target = this.remotePilgrims.get(targetCid);
+      if (target && target.group) {
+        const dx = target.group.position.x - this.playerPos.x;
+        const dz = target.group.position.z - this.playerPos.z;
+        this.currentCharRotation = Math.atan2(dx, dz);
+        if (this.characterGroup) {
+          this.characterGroup.rotation.y = this.currentCharRotation;
+        }
+      }
+    }
+    this.localGreetTimer = 1.2;
+  }
+
+  triggerRemoteGreeting(fromCid) {
+    if (!this.remotePilgrims || !this.remotePilgrims.has(fromCid)) return;
+    const entry = this.remotePilgrims.get(fromCid);
+    if (entry) {
+      entry.greetTimer = 1.2;
+    }
   }
 }
 

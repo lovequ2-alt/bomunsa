@@ -200,6 +200,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     };
+    window.templeSync.onGreeting = (fromCid) => {
+      if (app.triggerRemoteGreeting) {
+        app.triggerRemoteGreeting(fromCid);
+      }
+      showTurnToast('🙏 합장 인사를 건넸습니다', true, 3200);
+    };
+  }
+
+  // 다른 참배객 근접 시 합장 인사 버튼
+  const greetBtn = document.getElementById('greet-btn');
+  let nearbyPilgrimId = null;
+  window.onNearbyPilgrimChanged = (cid) => {
+    nearbyPilgrimId = cid;
+    if (!greetBtn) return;
+    greetBtn.style.display = cid ? 'inline-flex' : 'none';
+  };
+  if (greetBtn) {
+    greetBtn.addEventListener('click', () => {
+      if (!nearbyPilgrimId) return;
+      if (app.performLocalGreeting) {
+        app.performLocalGreeting(nearbyPilgrimId);
+      }
+      if (window.templeSync) {
+        window.templeSync.sendGreeting(nearbyPilgrimId);
+      }
+      showTurnToast('🙏 합장 인사를 건넸습니다', true, 3000);
+    });
   }
 
   // 발원문 목록 및 수정 대상 (모든 전각 공통)
