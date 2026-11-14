@@ -327,7 +327,7 @@ body.beomjong-ready .control-hint {
 /* 전각 근접 팝업 안내: [사용자 요청 반영: 거대하고 어두운 박스를 없애고 뒤의 탑과 전각이 100% 보이도록 투명화] */
 .location-card {
   position: absolute;
-  top: 75px;
+  top: 94px;
   left: 50%;
   transform: translateX(-50%) translateY(-20px);
   z-index: 10;
@@ -1181,20 +1181,25 @@ body.beomjong-ready .control-hint {
 /* 동시접속 인원 표시 배지 */
 .presence-badge {
   position: fixed;
-  top: 70px;
-  left: 16px;
+  top: 58px;
+  left: 14px;
   z-index: 12;
-  padding: 5px 11px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(15, 18, 24, 0.72);
   border: 1px solid rgba(255, 217, 102, 0.35);
   color: #f5e6b3;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   backdrop-filter: blur(8px);
   pointer-events: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+body.in-meditation .presence-badge {
+  top: 14px;
+  left: 14px;
 }
 
 .presence-badge.solo-mode {
@@ -1232,8 +1237,8 @@ body.beomjong-ready .control-hint {
 /* 오른쪽 '발원문 보기' 플로팅 버튼 */
 .view-prayers-fab {
   position: fixed;
-  top: 70px;
-  right: 16px;
+  top: 58px;
+  right: 14px;
   z-index: 22;
   display: inline-flex;
   align-items: center;

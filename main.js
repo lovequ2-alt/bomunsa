@@ -177,20 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const presenceBadge = document.getElementById('presence-badge');
   if (window.templeSync) {
     if (presenceBadge && !window.templeSync.isConfigured) {
-      presenceBadge.textContent = '👥 도량 1/10명 (개인 모드)';
+      presenceBadge.textContent = '👥 도량 1명';
     }
-    window.templeSync.onPresenceChange = ({ count, max, isObserverOnly, isConfigured }) => {
+    window.templeSync.onPresenceChange = ({ count, isConfigured }) => {
       if (!presenceBadge) return;
-      if (!isConfigured) {
-        presenceBadge.textContent = `👥 도량 1/${max}명 (개인 모드)`;
-        presenceBadge.classList.remove('solo-mode');
-      } else if (isObserverOnly) {
-        presenceBadge.textContent = `👥 도량 ${max}/${max}명 (혼자 참배 모드)`;
-        presenceBadge.classList.add('solo-mode');
-      } else {
-        presenceBadge.textContent = `👥 도량 ${count}/${max}명`;
-        presenceBadge.classList.remove('solo-mode');
-      }
+      const displayCount = isConfigured ? (count || 1) : 1;
+      presenceBadge.textContent = `👥 도량 ${displayCount}명`;
+      presenceBadge.classList.remove('solo-mode');
     };
     window.templeSync.onRemoteStatesChange = (states) => {
       if (app.syncRemotePilgrims) {

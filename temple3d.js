@@ -1737,7 +1737,7 @@ class Bomunsa3D {
     this.registerInteractable({
       id: 'gwanyok',
       name: '아기 부처님 관욕식(灌浴式)',
-      desc: '석가모니 부처님 탄신을 찬탄하며, 지극한 정성으로 금빛 아기 부처님께 맑은 감로수를 세 번 부어 몸과 마음의 모든 번뇌를 씻어내는 성스러운 관욕 도량입니다.',
+      desc: '관욕 예식 입니다',
       position: new THREE.Vector3(x, 0, z + 1.55), // 관욕대 바로 앞
       lookTarget: new THREE.Vector3(x, 1.25, z),
       triggerRadius: 2.0,
