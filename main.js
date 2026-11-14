@@ -117,10 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const tag = document.createElement('div');
       tag.className = 'prayers-list-item-tag';
+      tag.style.color = '#7a5a10';
       tag.innerHTML = `${WHITE_LOTUS_SVG}<span>${loc.id === 'jijang' ? `도량 영가등 ${idx + 1}` : `참배객 발원 ${idx + 1}`}</span>`;
 
       const textEl = document.createElement('div');
       textEl.className = 'prayers-list-item-text';
+      textEl.style.color = '#1a1714';
       textEl.textContent = pItem.text;
 
       card.appendChild(tag);

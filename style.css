@@ -1324,7 +1324,7 @@ body.in-meditation .presence-badge {
 .prayers-list-item-text {
   font-size: 0.90rem;
   line-height: 1.5;
-  color: #2b261f;
+  color: #1a1714 !important;
   word-break: keep-all;
   white-space: pre-wrap;
 }
