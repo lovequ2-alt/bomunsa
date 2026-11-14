@@ -1139,7 +1139,10 @@ class Bomunsa3D {
     // 4. '전각모습' 사진의 초록색 격자 창살문 + 하단 연꽃 궁판 + 기둥 옆 황토색 세로 액자 패널
     const doorMat = new THREE.MeshStandardMaterial({
       map: texSet.doorTex,
-      roughness: 0.60,
+      emissive: 0xffffff,
+      emissiveMap: texSet.doorTex,
+      emissiveIntensity: 0.42,
+      roughness: 0.55,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1
@@ -1196,7 +1199,13 @@ class Bomunsa3D {
     }
 
     // 5. 상단 모로단청 공포대/창방 띠 ('전각모습' 상단 화려한 단청)
-    const danMat = new THREE.MeshStandardMaterial({ map: texSet.dancheongTex, roughness: 0.58 });
+    const danMat = new THREE.MeshStandardMaterial({
+      map: texSet.dancheongTex,
+      emissive: 0xffffff,
+      emissiveMap: texSet.dancheongTex,
+      emissiveIntensity: 0.30,
+      roughness: 0.58
+    });
     const dancheongFrieze = new THREE.Mesh(new THREE.BoxGeometry(width + 0.6, lintelHeight * 0.78, depth + 0.5), danMat);
     dancheongFrieze.position.y = 0.8 + height + (lintelHeight * 0.36);
     group.add(dancheongFrieze);
@@ -1827,7 +1836,7 @@ class Bomunsa3D {
     this.scene.add(daewoong);
 
     // [사용자 요청 반영: 지붕 아래 밖에서 선명히 보이는 하얀 바탕 검정 글씨 현판]
-    this.createSignboard(daewoong, '대웅전', '大雄殿', 0, 5.15, 7.0 / 2 + 0.85, 2.8, 0.74);
+    this.createSignboard(daewoong, '대웅전', '大雄殿', 0, 4.95, 7.0 / 2 + 1.15, 2.8, 0.74);
     this.createStoneLantern(x - 3.8, 0, z + 5.2);
     this.createStoneLantern(x + 3.8, 0, z + 5.2);
 
@@ -1854,7 +1863,7 @@ class Bomunsa3D {
     jijang.position.set(x, y, z);
     this.scene.add(jijang);
 
-    this.createSignboard(jijang, '지장전', '地藏殿', 0, 4.48, 5.6 / 2 + 0.85, 2.4, 0.66);
+    this.createSignboard(jijang, '지장전', '地藏殿', 0, 4.30, 5.6 / 2 + 1.15, 2.4, 0.66);
 
     // 지장전 전체 직사각형 기단/벽체 충돌 박스 등록
     this.addBoxObstacle(x - 4.7, x + 4.7, z - 3.2, z + 3.2);
@@ -2298,7 +2307,7 @@ class Bomunsa3D {
     beomjong.position.set(x, y, z);
     this.scene.add(beomjong);
 
-    this.createSignboard(beomjong, '범종각', '梵鐘閣', 0, 4.35, depth / 2 + 0.85, 2.3, 0.64);
+    this.createSignboard(beomjong, '범종각', '梵鐘閣', 0, 4.18, depth / 2 + 1.15, 2.3, 0.64);
 
     // 범종각 기단 충돌 박스 등록
     this.addBoxObstacle(x - 3.7, x + 3.7, z - 2.8, z + 2.8);
@@ -2372,7 +2381,7 @@ class Bomunsa3D {
     sansin.position.set(x, y, z);
     this.scene.add(sansin);
 
-    this.createSignboard(sansin, '산령각', '山靈閣', 0, 4.02, 4.6 / 2 + 0.85, 2.2, 0.60);
+    this.createSignboard(sansin, '산령각', '山靈閣', 0, 3.85, 4.6 / 2 + 1.15, 2.2, 0.60);
 
     // 산령각 전체 직사각형 기단/벽체 충돌 박스 등록
     this.addBoxObstacle(x - 3.8, x + 3.8, z - 2.7, z + 2.7);
@@ -2425,18 +2434,18 @@ class Bomunsa3D {
       roughness: 0.52,
       metalness: 0.05
     });
-    // [요청 반영: 어두운 부분은 진한 회색 처리]
+    // [요청 반영: 어두운 부분은 진한 회색 처리 - 모바일에서도 시커멓게 뭉개지지 않도록 밝기 조정]
     const darkGreyWallMat = new THREE.MeshStandardMaterial({
-      color: 0x2f3339,
-      roughness: 0.85
+      color: 0x5c626b,
+      roughness: 0.82
     });
     const deepDarkGreyMat = new THREE.MeshStandardMaterial({
-      color: 0x202328,
-      roughness: 0.90
+      color: 0x454a52,
+      roughness: 0.86
     });
     const midGreyStoneMat = new THREE.MeshStandardMaterial({
-      color: 0x454a52,
-      roughness: 0.82
+      color: 0x6f7680,
+      roughness: 0.78
     });
 
     const width = 10.6;
@@ -2735,7 +2744,7 @@ class Bomunsa3D {
     this.scene.add(group);
 
     // 대리석 평지붕 아래 하얀 바탕 검정 글씨 '석굴암' 현판
-    this.createSignboard(group, '석굴암', '石窟庵', 0, roofBaseY + 0.36, (depth + 1.25) / 2 + 0.28, 2.5, 0.68);
+    this.createSignboard(group, '석굴암', '石窟庵', 0, roofBaseY + 0.25, (depth + 1.25) / 2 + 0.55, 2.5, 0.68);
 
     // 석굴암 전각 및 뒤편 암석 전체 직사각형 충돌 박스 등록
     this.addBoxObstacle(x - 6.8, x + 6.8, z - 5.5, z + 3.6);
