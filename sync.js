@@ -121,7 +121,10 @@ class TempleSync {
             z: spawn.z,
             rotY: Math.PI,
             isWalking: false,
-            mode: 'outside'
+            mode: 'outside',
+            busyLoc: null,
+            queueLoc: null,
+            queuedAt: null
           });
         }
       });
@@ -183,6 +186,9 @@ class TempleSync {
             rotY: u.rotY ?? Math.PI,
             isWalking: Boolean(u.isWalking),
             mode: u.mode || 'outside',
+            busyLoc: u.busyLoc || null,
+            queueLoc: u.queueLoc || null,
+            queuedAt: u.queuedAt || null,
             joinedAt: u.joinedAt || Date.now()
           });
         }
@@ -224,7 +230,9 @@ class TempleSync {
         rotY: Number(state.rotY.toFixed(2)),
         isWalking: Boolean(state.isWalking),
         mode: state.mode || 'outside',
-        busyLoc: state.busyLoc || null
+        busyLoc: state.busyLoc || null,
+        queueLoc: state.queueLoc || null,
+        queuedAt: state.queuedAt || null
       }
     });
   }

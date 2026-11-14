@@ -1228,3 +1228,104 @@ body.beomjong-ready .control-hint {
   border-color: #ffd966;
   color: #ffe89e;
 }
+
+/* 오른쪽 '발원문 보기' 플로팅 버튼 */
+.view-prayers-fab {
+  position: fixed;
+  top: 70px;
+  right: 16px;
+  z-index: 22;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(20, 17, 14, 0.84);
+  border: 1px solid rgba(212, 175, 55, 0.52);
+  color: #f7e6b7;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.80rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.view-prayers-fab:hover {
+  border-color: rgba(255, 217, 102, 0.9);
+  background: rgba(30, 25, 20, 0.94);
+  transform: translateY(-1px);
+}
+
+.view-prayers-fab:active {
+  transform: scale(0.97);
+}
+
+.view-prayers-fab .white-lotus-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* 다른 참배객 발원문 목록 모달 */
+.prayers-list-modal {
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.prayers-list-desc {
+  margin-bottom: 10px !important;
+}
+
+.prayers-list-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46vh;
+  padding-right: 4px;
+  margin-bottom: 14px;
+}
+
+.prayers-list-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 12px;
+  padding: 10px 13px;
+  text-align: left;
+}
+
+.prayers-list-item.is-mine {
+  border-color: rgba(255, 217, 102, 0.65);
+  background: rgba(212, 175, 55, 0.10);
+}
+
+.prayers-list-item-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e8c76a;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.prayers-list-item-text {
+  font-size: 0.88rem;
+  line-height: 1.48;
+  color: #f4efe4;
+  word-break: keep-all;
+  white-space: pre-wrap;
+}
+
+.prayers-list-empty {
+  padding: 26px 12px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: rgba(242, 238, 230, 0.68);
+}

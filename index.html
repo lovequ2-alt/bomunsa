@@ -81,6 +81,12 @@
   <!-- 동시접속 인원 표시 배지 (최대 10명) -->
   <div id="presence-badge" class="presence-badge">👥 도량 1/10명</div>
 
+  <!-- 오른쪽 발원문 보기 버튼 (현재 전각의 다른 참배객 발원문 열람) -->
+  <button id="view-prayers-btn" class="view-prayers-fab" style="display: none;" type="button">
+    <svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>
+    <span>발원문 보기</span>
+  </button>
+
   <!-- 순서 대기/알림 배너 -->
   <div id="turn-toast" class="turn-toast" style="display: none;"></div>
 
@@ -174,6 +180,18 @@
       <div class="prayer-modal-actions">
         <button id="prayer-submit-btn" class="prayer-submit-btn"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 정성으로 발원 올리기</button>
         <button id="prayer-cancel-btn" class="prayer-cancel-btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 해당 전각 발원문 목록 모달 (다른 참배객 발원문 열람) -->
+  <div id="prayers-list-modal-overlay" class="prayer-modal-overlay">
+    <div class="prayer-modal prayers-list-modal">
+      <h3 id="prayers-list-modal-title"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#b38f40" stroke-width="1.1" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 도량 발원문</h3>
+      <p id="prayers-list-modal-desc" class="prayers-list-desc">이 전각에 참배객들이 정성껏 올린 발원문입니다.</p>
+      <div id="prayers-list-body" class="prayers-list-body"></div>
+      <div class="prayer-modal-actions">
+        <button id="prayers-list-close-btn" class="prayer-cancel-btn">닫기</button>
       </div>
     </div>
   </div>

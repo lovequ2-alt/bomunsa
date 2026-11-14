@@ -46,8 +46,11 @@ class Bomunsa3D {
 
     // 다중 접속 다른 참배객(최대 9명 추가 -> 본인 포함 10명)
     this.remotePilgrims = new Map();
+    this.remoteInsideGroup = null;
     this.waitingForLoc = null;
+    this.waitingQueuedAt = null;
     this.lastBusyLoc = null;
+    this.lastQueueKey = null;
     this.lastOccupiedState = false;
     this.remoteRobePalette = [
       0x74828f, 0x8d8274, 0x6f8076, 0x8b7b84, 0x7a7f8c,
@@ -255,8 +258,8 @@ class Bomunsa3D {
     root.add(leftLegPivot);
     root.add(rightLegPivot);
 
-    // 전체적으로 작고 앙증맞은 비율 조정
-    root.scale.set(0.92, 0.92, 0.92);
+    // 전체적으로 작고 앙증맞은 비율 조정 (더 아담한 크기로 축소)
+    root.scale.set(0.72, 0.72, 0.72);
 
     return {
       group: root,
@@ -3744,20 +3747,20 @@ class Bomunsa3D {
     // ==========================================
     const cushionMat = new THREE.MeshStandardMaterial({ color: 0x8a1c26, roughness: 0.65 });
     // [사용자 요청: 둥근 방석과 포근하고 둥근 결가부좌 곡선 연출]
-    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.56, 0.09, 32), cushionMat);
-    cushion.position.set(0, 0.045, -5.0);
+    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.08, 32), cushionMat);
+    cushion.position.set(0, 0.04, -5.0);
     this.insideGroup.add(cushion);
 
-    const cushionTrim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.58, 0.03, 32), new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.4 }));
+    const cushionTrim = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.47, 0.03, 32), new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.4 }));
     cushionTrim.position.set(0, 0.015, -5.0);
     this.insideGroup.add(cushionTrim);
 
     this.insideMonkGroup = new THREE.Group();
     this.insideMonkGroup.visible = true;
     // [사용자 스케치 반영: 단정하고 둥근 눈사람/호리병 실루엣의 참배 캐릭터] (z = -4.9)
-    this.insideMonkGroup.position.set(0, 0.12, -4.9);
+    this.insideMonkGroup.position.set(0, 0.10, -4.9);
     this.insideMonkGroup.rotation.y = Math.PI; // 제단(-Z 방향)을 경건히 바라봄
-    this.insideMonkGroup.scale.set(0.44, 0.44, 0.44);
+    this.insideMonkGroup.scale.set(0.35, 0.35, 0.35);
 
     const monkRobeMat = new THREE.MeshStandardMaterial({ color: 0x828892, roughness: 0.65 });
     const monkSkinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.45 });
@@ -3847,7 +3850,81 @@ class Bomunsa3D {
     this.insideMonkGroup.add(this.insideMonkTorsoPivot);
     this.insideGroup.add(this.insideMonkGroup);
 
+    // 다른 참배객들의 전각 내부 앉은 모습 그룹
+    this.remoteInsideGroup = new THREE.Group();
+    this.remoteInsideGroup.visible = false;
+    this.insideGroup.add(this.remoteInsideGroup);
+
     this.scene.add(this.insideGroup);
+  }
+
+  // 전각 내부 동시 입장 시 다른 참배객용 좌복 + 앉은 캐릭터 메시 (정좌 자세 유지)
+  buildInsideSittingMonkMesh(robeColorHex = 0x828892) {
+    const slotGroup = new THREE.Group();
+
+    const cushionMat = new THREE.MeshStandardMaterial({ color: 0x8a1c26, roughness: 0.65 });
+    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.08, 24), cushionMat);
+    cushion.position.set(0, 0.04, -0.1);
+    slotGroup.add(cushion);
+
+    const cushionTrim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.45, 0.47, 0.03, 24),
+      new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.4 })
+    );
+    cushionTrim.position.set(0, 0.015, -0.1);
+    slotGroup.add(cushionTrim);
+
+    const monkGroup = new THREE.Group();
+    monkGroup.position.set(0, 0.10, 0);
+    monkGroup.rotation.y = Math.PI;
+    monkGroup.scale.set(0.35, 0.35, 0.35);
+
+    const robeMat = new THREE.MeshStandardMaterial({ color: robeColorHex, roughness: 0.65 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.45 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+
+    const lowerBody = new THREE.Mesh(new THREE.SphereGeometry(0.38, 18, 18), robeMat);
+    lowerBody.scale.set(1.18, 0.88, 1.10);
+    lowerBody.position.set(0, 0.31, 0);
+    monkGroup.add(lowerBody);
+
+    const upperBody = new THREE.Mesh(new THREE.SphereGeometry(0.32, 18, 18), robeMat);
+    upperBody.scale.set(1.0, 1.25, 0.95);
+    upperBody.position.set(0, 0.57, 0);
+    monkGroup.add(upperBody);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 18), skinMat);
+    head.position.set(0, 0.93, 0);
+    monkGroup.add(head);
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), skinMat);
+    nose.position.set(0, 0.93, 0.24);
+    monkGroup.add(nose);
+
+    [-0.23, 0.23].forEach(ex => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), skinMat);
+      ear.position.set(ex, 0.93, 0);
+      monkGroup.add(ear);
+    });
+
+    const armsGroup = new THREE.Group();
+    armsGroup.position.set(0, 0.49, 0.18);
+    [-0.12, 0.12].forEach((sx, idx) => {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.042, 0.19, 10), robeMat);
+      arm.position.set(sx, -0.04, 0.03);
+      arm.rotation.z = idx === 0 ? -0.62 : 0.62;
+      arm.rotation.x = 0.38;
+      armsGroup.add(arm);
+    });
+
+    const hands = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), whiteMat);
+    hands.scale.set(0.85, 1.35, 0.85);
+    hands.position.set(0, 0.09, 0.08);
+    armsGroup.add(hands);
+    monkGroup.add(armsGroup);
+
+    slotGroup.add(monkGroup);
+    return slotGroup;
   }
 
   // [방안 A 구현] 경건한 삼배(절하기) 애니메이션 실행기
@@ -4351,13 +4428,18 @@ class Bomunsa3D {
     // 전각 탭 시 즉시 기존 팝업을 닫고, 바로 앞에 설 때까지 입장하기가 뜨지 않도록 처리
     this.activeLocation = null;
     this.waitingForLoc = null;
+    this.waitingQueuedAt = null;
     if (window.onLocationChanged) window.onLocationChanged(null);
 
+    const queueStatus = this.isQueueLocation(locationId)
+      ? this.getQueueStatus(locationId, item.position)
+      : { isOccupied: false, totalWaiting: 0 };
     const occupants = this.getOccupyingPilgrims(locationId, item.position);
     let finalDest = item.position.clone();
-    if (occupants.length > 0 && locationId !== 'hojimun') {
-      finalDest = this.getSideWaitPos(item.position, occupants.length);
+    if (this.isQueueLocation(locationId) && (occupants.length > 0 || queueStatus.totalWaiting > 0)) {
+      finalDest = this.getSideWaitPos(item.position, occupants.length + queueStatus.totalWaiting);
       this.waitingForLoc = locationId;
+      this.waitingQueuedAt = Date.now();
     }
     finalDest.y = this.getTerrainHeight(finalDest.x, finalDest.z);
     this.finalLookTarget = item.lookTarget ? item.lookTarget.clone() : null;
@@ -4489,19 +4571,39 @@ class Bomunsa3D {
       }
     });
 
-    const isOccupied = nearest && nearest.id !== 'hojimun'
-      ? this.getOccupyingPilgrims(nearest.id, nearest.position).length > 0
-      : false;
-
-    if (nearest && isOccupied && !this.waitingForLoc) {
-      this.waitingForLoc = nearest.id;
+    // 대기 중이던 장소를 벗어나면 대기열에서 자동 이탈
+    if (this.waitingForLoc && (!nearest || nearest.id !== this.waitingForLoc)) {
+      this.waitingForLoc = null;
+      this.waitingQueuedAt = null;
     }
 
-    if (nearest !== this.activeLocation || isOccupied !== this.lastOccupiedState) {
+    let isOccupied = false;
+    let queueRank = 0;
+    let queueTotal = 0;
+    if (nearest && this.isQueueLocation(nearest.id)) {
+      const q = this.getQueueStatus(nearest.id, nearest.position);
+      const needWait = q.isOccupied || q.hasAheadWaiter;
+      if (needWait && this.waitingForLoc !== nearest.id) {
+        this.waitingForLoc = nearest.id;
+        this.waitingQueuedAt = Date.now();
+      }
+      const qAfter = this.getQueueStatus(nearest.id, nearest.position);
+      isOccupied = qAfter.isOccupied || qAfter.hasAheadWaiter;
+      queueRank = qAfter.myRank;
+      queueTotal = qAfter.totalWaiting;
+    }
+
+    const stateKey = `${nearest ? nearest.id : ''}|${isOccupied}|${queueRank}|${queueTotal}`;
+    if (nearest !== this.activeLocation || stateKey !== this.lastQueueKey) {
       this.activeLocation = nearest;
       this.lastOccupiedState = isOccupied;
+      this.lastQueueKey = stateKey;
       if (window.onLocationChanged) {
-        window.onLocationChanged(nearest ? { ...nearest, occupiedByOther: isOccupied } : null);
+        window.onLocationChanged(
+          nearest
+            ? { ...nearest, occupiedByOther: isOccupied, queueRank, queueTotal }
+            : null
+        );
       }
     }
   }
@@ -4768,6 +4870,7 @@ class Bomunsa3D {
     this.insideCandleLight.intensity = 0;
 
     if (this.insideGroup) this.insideGroup.visible = false;
+    if (this.remoteInsideGroup) this.remoteInsideGroup.visible = false;
     if (this.characterGroup) this.characterGroup.visible = true;
     if (window.templeSync) {
       window.templeSync.broadcastState({
@@ -5212,47 +5315,84 @@ class Bomunsa3D {
     this.checkWaitingTurn();
     if (window.templeSync) {
       const busyLoc = this.getLocalBusyLoc();
-      const forceSync = busyLoc !== this.lastBusyLoc;
+      const queueLoc = this.waitingForLoc || null;
+      const queuedAt = this.waitingQueuedAt || null;
+      const forceSync = busyLoc !== this.lastBusyLoc || queueLoc !== this.lastQueueLoc;
       this.lastBusyLoc = busyLoc;
+      this.lastQueueLoc = queueLoc;
       window.templeSync.broadcastState({
         x: this.playerPos.x,
         z: this.playerPos.z,
         rotY: this.characterGroup ? this.characterGroup.rotation.y : this.currentCharRotation,
         isWalking: Boolean(this.isWalking || this.pagodaIsRunning),
         mode: this.currentMode,
-        busyLoc
+        busyLoc,
+        queueLoc,
+        queuedAt
       }, forceSync);
     }
 
     this.renderer.render(this.scene, this.camera);
   }
 
+  isQueueLocation(locationId) {
+    return locationId === 'gwanyok' || locationId === 'beomjong' || locationId === 'pagoda';
+  }
+
   getLocalBusyLoc() {
     if (this.isGwanyokActive) return 'gwanyok';
     if (this.isBeomjongReady || this.isBeomjongRinging) return 'beomjong';
     if (this.currentMode === 'pagoda_spin') return 'pagoda';
-    if (this.currentMode && this.currentMode.startsWith('inside_')) {
-      return this.currentMode.replace('inside_', '');
-    }
+    // 일반 전각(대웅전, 지장전, 석굴암, 산령각)은 여럿이 동시 입장 가능하므로 점유하지 않음
     return null;
   }
 
   getOccupyingPilgrims(locationId, itemPos) {
     const occupants = [];
+    if (!this.isQueueLocation(locationId)) return occupants;
     if (!this.remotePilgrims || !itemPos) return occupants;
     this.remotePilgrims.forEach((entry, cid) => {
       if (entry.busyLoc === locationId) {
         occupants.push(cid);
         return;
       }
-      if (entry.group && entry.group.visible) {
+      if (entry.group && entry.group.visible && entry.queueLoc !== locationId) {
         const dist = Math.hypot(entry.targetPos.x - itemPos.x, entry.targetPos.z - itemPos.z);
-        if (dist < 1.35) {
+        if (dist < 1.15) {
           occupants.push(cid);
         }
       }
     });
     return occupants;
+  }
+
+  getQueueStatus(locationId, itemPos) {
+    const occupants = this.getOccupyingPilgrims(locationId, itemPos);
+    const waiters = [];
+    const myCid = window.templeSync ? window.templeSync.clientId : 'local';
+
+    if (this.remotePilgrims) {
+      this.remotePilgrims.forEach((entry, cid) => {
+        if (entry.queueLoc === locationId && entry.queuedAt) {
+          waiters.push({ cid, queuedAt: entry.queuedAt });
+        }
+      });
+    }
+    if (this.waitingForLoc === locationId && this.waitingQueuedAt) {
+      waiters.push({ cid: myCid, queuedAt: this.waitingQueuedAt });
+    }
+
+    waiters.sort((a, b) => a.queuedAt - b.queuedAt || String(a.cid).localeCompare(String(b.cid)));
+    const myIdx = waiters.findIndex(w => w.cid === myCid);
+    const myRank = myIdx >= 0 ? myIdx + 1 : 0;
+    const hasAheadWaiter = myIdx > 0 || (myIdx < 0 && waiters.length > 0);
+
+    return {
+      isOccupied: occupants.length > 0,
+      myRank,
+      totalWaiting: waiters.length,
+      hasAheadWaiter
+    };
   }
 
   getSideWaitPos(itemPos, occupantCount) {
@@ -5280,15 +5420,19 @@ class Bomunsa3D {
     const item = this.interactables.find(i => i.id === this.waitingForLoc);
     if (!item) {
       this.waitingForLoc = null;
+      this.waitingQueuedAt = null;
       return;
     }
-    const occupants = this.getOccupyingPilgrims(item.id, item.position);
-    if (occupants.length === 0) {
+    const q = this.getQueueStatus(item.id, item.position);
+    if (!q.isOccupied && !q.hasAheadWaiter) {
       this.waitingForLoc = null;
+      this.waitingQueuedAt = null;
       this.checkInteractables();
       if (window.onTurnReady) {
         window.onTurnReady(item);
       }
+    } else {
+      this.checkInteractables();
     }
   }
 
@@ -5300,6 +5444,9 @@ class Bomunsa3D {
         const entry = this.remotePilgrims.get(cid);
         if (entry && entry.group) {
           this.scene.remove(entry.group);
+        }
+        if (entry && entry.insideGroup && this.remoteInsideGroup) {
+          this.remoteInsideGroup.remove(entry.insideGroup);
         }
         this.remotePilgrims.delete(cid);
       }
@@ -5316,14 +5463,25 @@ class Bomunsa3D {
         built.group.position.set(st.x || 0, 0, st.z || 34.0);
         built.group.rotation.y = st.rotY ?? Math.PI;
         this.scene.add(built.group);
+
+        const insideSitting = this.buildInsideSittingMonkMesh(color);
+        insideSitting.visible = false;
+        if (this.remoteInsideGroup) {
+          this.remoteInsideGroup.add(insideSitting);
+        }
+
         entry = {
           group: built.group,
           limbs: built.limbs,
+          insideGroup: insideSitting,
           targetPos: new THREE.Vector3(st.x || 0, 0, st.z || 34.0),
           targetRotY: st.rotY ?? Math.PI,
           isWalking: Boolean(st.isWalking),
           mode: st.mode || 'outside',
           busyLoc: st.busyLoc || null,
+          queueLoc: st.queueLoc || null,
+          queuedAt: st.queuedAt || null,
+          joinedAt: st.joinedAt || Date.now(),
           walkTime: Math.random() * Math.PI * 2
         };
         this.remotePilgrims.set(cid, entry);
@@ -5333,6 +5491,8 @@ class Bomunsa3D {
         entry.isWalking = Boolean(st.isWalking);
         entry.mode = st.mode || 'outside';
         entry.busyLoc = st.busyLoc || null;
+        entry.queueLoc = st.queueLoc || null;
+        entry.queuedAt = st.queuedAt || null;
       }
     });
     this.checkWaitingTurn();
@@ -5340,10 +5500,48 @@ class Bomunsa3D {
 
   updateRemotePilgrims(delta) {
     const showInYard = this.currentMode === 'outside' || this.currentMode === 'pagoda_spin';
+    const isLocalInside = Boolean(this.currentMode && this.currentMode.startsWith('inside_'));
+
+    if (this.remoteInsideGroup) {
+      this.remoteInsideGroup.visible = isLocalInside;
+    }
+
+    if (isLocalInside) {
+      const insideSlots = [
+        { x: -1.15, z: -4.85 },
+        { x: 1.15, z: -4.85 },
+        { x: -2.15, z: -4.65 },
+        { x: 2.15, z: -4.65 },
+        { x: -0.75, z: -4.05 },
+        { x: 0.75, z: -4.05 },
+        { x: -1.75, z: -3.95 },
+        { x: 1.75, z: -3.95 },
+        { x: -2.65, z: -4.15 },
+        { x: 2.65, z: -4.15 }
+      ];
+      const sameHallEntries = [];
+      this.remotePilgrims.forEach((entry, cid) => {
+        entry.group.visible = false;
+        if (entry.mode === this.currentMode && entry.insideGroup) {
+          sameHallEntries.push({ cid, entry });
+        } else if (entry.insideGroup) {
+          entry.insideGroup.visible = false;
+        }
+      });
+      sameHallEntries.sort((a, b) => (a.entry.joinedAt || 0) - (b.entry.joinedAt || 0) || String(a.cid).localeCompare(String(b.cid)));
+      sameHallEntries.forEach(({ entry }, idx) => {
+        const slot = insideSlots[idx % insideSlots.length];
+        entry.insideGroup.position.set(slot.x, 0, slot.z);
+        entry.insideGroup.visible = true;
+      });
+      return;
+    }
+
     const minSep = 0.95;
     const placedPositions = [{ x: this.playerPos.x, z: this.playerPos.z }];
 
     this.remotePilgrims.forEach((entry, cid) => {
+      if (entry.insideGroup) entry.insideGroup.visible = false;
       const isRemoteInside = Boolean(entry.mode && entry.mode.startsWith('inside'));
       const shouldShow = showInYard && !isRemoteInside;
       entry.group.visible = shouldShow;
