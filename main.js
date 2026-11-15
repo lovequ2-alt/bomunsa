@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (window.templeSync) {
     if (typeof window.templeSync.fetchTotalVisitors === 'function') {
-      window.templeSync.fetchTotalVisitors(false).then((total) => {
+      window.templeSync.fetchTotalVisitors(true).then((total) => {
         if (typeof total === 'number') {
           currentTotalVisitors = total;
           updateTopStatsBadge();

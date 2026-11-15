@@ -284,11 +284,10 @@ class TempleSync {
   }
 
   // ==============================
-  // 도량 누적 방문자수 조회 및 증가 (Supabase 미설정/미생성 시 localStorage 폴백)
+  // 도량 누적 방문자수 조회 및 증가 (재방문/재입장 시에도 매번 누적 증가, Supabase 미설정 시 localStorage 폴백)
   // ==============================
   async fetchTotalVisitors(shouldIncrement = false) {
-    const alreadyCounted = sessionStorage.getItem('bomunsa_session_visited') === '1';
-    const canIncrement = Boolean(shouldIncrement && !alreadyCounted);
+    const canIncrement = Boolean(shouldIncrement);
 
     if (!this.isConfigured || !this.supabase) {
       return this.getLocalTotalVisitors(canIncrement);
@@ -298,7 +297,6 @@ class TempleSync {
       if (canIncrement) {
         const { data, error } = await this.supabase.rpc('increment_total_visitors');
         if (!error && typeof data === 'number') {
-          sessionStorage.setItem('bomunsa_session_visited', '1');
           return data;
         }
       }
@@ -308,9 +306,6 @@ class TempleSync {
         .eq('key', 'total_visitors')
         .single();
       if (!selErr && row && typeof row.count === 'number') {
-        if (canIncrement) {
-          sessionStorage.setItem('bomunsa_session_visited', '1');
-        }
         return row.count;
       }
 
@@ -324,7 +319,6 @@ class TempleSync {
         const total = Math.max(uniqueOwners.size + (canIncrement ? 1 : 0), uniqueOwners.size, localCount);
         if (canIncrement) {
           localStorage.setItem('bomunsa_total_visitors', String(total));
-          sessionStorage.setItem('bomunsa_session_visited', '1');
         }
         return total;
       }
@@ -339,7 +333,6 @@ class TempleSync {
     if (shouldIncrement) {
       count += 1;
       localStorage.setItem('bomunsa_total_visitors', String(count));
-      sessionStorage.setItem('bomunsa_session_visited', '1');
     }
     return Math.max(1, count);
   }
