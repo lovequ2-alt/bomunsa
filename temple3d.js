@@ -480,7 +480,7 @@ class Bomunsa3D {
     this.boxObstacles.push({ minX, maxX, minZ, maxZ });
   }
 
-  checkCollision(newPos) {
+  checkCollision(newPos, skipPilgrimCollision = false) {
     const playerRadius = 0.55;
     let collided = false;
 
@@ -534,7 +534,7 @@ class Bomunsa3D {
       }
 
       // 3. 다른 참배객 캐릭터 충돌 검사 (서로 밀치거나 겹쳐 지나가지 않도록 부드럽게 우회)
-      if (this.remotePilgrims && this.currentMode === 'outside') {
+      if (!skipPilgrimCollision && this.remotePilgrims && this.currentMode === 'outside') {
         const otherRadius = 0.42;
         const minCharDist = otherRadius + playerRadius;
         this.remotePilgrims.forEach((entry) => {
@@ -555,6 +555,45 @@ class Bomunsa3D {
     }
 
     return collided;
+  }
+
+  hasNearbyRemotePilgrim(pos, maxDist = 1.35) {
+    if (!this.remotePilgrims || this.currentMode !== 'outside') return false;
+    let found = false;
+    this.remotePilgrims.forEach((entry) => {
+      if (found || !entry.group || !entry.group.visible) return;
+      const d = Math.hypot(pos.x - entry.group.position.x, pos.z - entry.group.position.z);
+      if (d < maxDist) found = true;
+    });
+    return found;
+  }
+
+  findClearWalkSpot(originPos, preferredDir = null) {
+    const radii = [0.95, 1.55, 2.25, 3.05];
+    const baseAngle = preferredDir
+      ? Math.atan2(preferredDir.z, preferredDir.x)
+      : Math.PI * 0.5;
+    const angleOffsets = [0, 0.5, -0.5, 1.0, -1.0, 1.57, -1.57, 2.1, -2.1, 2.6, -2.6, Math.PI];
+
+    for (const r of radii) {
+      for (const off of angleOffsets) {
+        const ang = baseAngle + off;
+        const cand = new THREE.Vector3(
+          originPos.x + Math.cos(ang) * r,
+          0,
+          originPos.z + Math.sin(ang) * r
+        );
+        const test = cand.clone();
+        if (!this.checkCollision(test) || cand.distanceTo(test) < 0.12) {
+          test.y = this.getTerrainHeight(test.x, test.z);
+          return test;
+        }
+      }
+    }
+    const fallback = originPos.clone();
+    this.checkCollision(fallback, true);
+    fallback.y = this.getTerrainHeight(fallback.x, fallback.z);
+    return fallback;
   }
 
   // [도심속 천년고찰 분위기 연출: 북측 보문산 바위 병풍 + 경내 외곽 기와 담장 + 원경의 아련한 서울 도심 실루엣]
@@ -4898,7 +4937,12 @@ class Bomunsa3D {
       if (e.key === 'd' || e.key === 'ArrowRight') { newPos.addScaledVector(right, step); moved = true; }
 
       if (moved) {
+        const intendedPos = newPos.clone();
         this.checkCollision(newPos);
+        if (newPos.distanceTo(this.playerPos) < 0.005 && this.hasNearbyRemotePilgrim(intendedPos, 1.4)) {
+          newPos.copy(intendedPos);
+          this.checkCollision(newPos, true);
+        }
         newPos.y = this.getTerrainHeight(newPos.x, newPos.z);
         this.playerPos.copy(newPos);
         this.walkTarget = null;
@@ -5281,6 +5325,21 @@ class Bomunsa3D {
     this.resetCharacterPose();
   }
 
+  // [관욕식 완료 후 뒤로 물러나 다른 참배객이 이용할 수 있도록 빈 공간으로 이동]
+  stepBackFromGwanyok() {
+    if (this.currentMode !== 'outside' || !this.gwanyokPos) return;
+    const retreatTarget = new THREE.Vector3(
+      this.gwanyokPos.x,
+      0,
+      this.gwanyokPos.z + 3.45
+    );
+    const clearSpot = this.findClearWalkSpot(retreatTarget, new THREE.Vector3(0, 0, 1));
+    this.walkTarget = clearSpot;
+    this.walkWaypoints = [];
+    this.isWalking = true;
+    this.finalLookTarget = this.gwanyokPos.clone();
+  }
+
   enterCurrentBuilding() {
 
     if (this.activeLocation.enterType === 'pagoda') {
@@ -5495,22 +5554,48 @@ class Bomunsa3D {
           if (hasCollided) {
             const movedDist = nextPos.distanceTo(this.playerPos);
             if (movedDist < 0.002) {
-              // 장애물에 정면으로 막혔을 때 좌/우 접선 방향으로 부드럽게 우회하여 목표 동그라미까지 도달
+              // 장애물·다른 참배객에 정면으로 막혔을 때 좌/우 접선 및 빈 공간으로 부드럽게 빠져나오기
               const stepLen = this.walkSpeed * delta;
               const sideA = this.playerPos.clone().add(new THREE.Vector3(-dir.z * stepLen, 0, dir.x * stepLen));
               const sideB = this.playerPos.clone().add(new THREE.Vector3(dir.z * stepLen, 0, -dir.x * stepLen));
               if (!this.checkCollision(sideA) && sideA.distanceTo(this.playerPos) >= 0.002) {
                 nextPos.copy(sideA);
+                this.pilgrimStuckFrames = 0;
               } else if (!this.checkCollision(sideB) && sideB.distanceTo(this.playerPos) >= 0.002) {
                 nextPos.copy(sideB);
+                this.pilgrimStuckFrames = 0;
+              } else if (this.hasNearbyRemotePilgrim(this.playerPos, 1.45)) {
+                this.pilgrimStuckFrames = (this.pilgrimStuckFrames || 0) + 1;
+                if (this.pilgrimStuckFrames >= 4) {
+                  // 다른 사람과 부딪혀 갇혔을 때 빈 공간(또는 참배객 충돌 우회)으로 빠져나옴
+                  const clearEscape = this.findClearWalkSpot(this.playerPos, dir);
+                  const escDir = new THREE.Vector3().subVectors(clearEscape, this.playerPos);
+                  if (escDir.lengthSq() > 0.001) {
+                    escDir.normalize();
+                    const escPos = this.playerPos.clone().addScaledVector(escDir, stepLen);
+                    this.checkCollision(escPos, true);
+                    nextPos.copy(escPos);
+                  } else {
+                    const bypassPos = this.playerPos.clone().addScaledVector(dir, stepLen);
+                    this.checkCollision(bypassPos, true);
+                    nextPos.copy(bypassPos);
+                  }
+                  this.pilgrimStuckFrames = 0;
+                }
               } else if (this.walkWaypoints && this.walkWaypoints.length > 0) {
                 this.walkTarget = this.walkWaypoints.shift();
+                this.pilgrimStuckFrames = 0;
               } else {
                 this.isWalking = false;
                 this.walkTarget = null;
                 this.walkWaypoints = [];
+                this.pilgrimStuckFrames = 0;
               }
+            } else {
+              this.pilgrimStuckFrames = 0;
             }
+          } else {
+            this.pilgrimStuckFrames = 0;
           }
 
           nextPos.y = this.getTerrainHeight(nextPos.x, nextPos.z);

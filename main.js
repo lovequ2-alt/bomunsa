@@ -696,6 +696,11 @@ document.addEventListener('DOMContentLoaded', () => {
           gwanyokLadleBtn.style.display = 'none';
         }
         enterBtn.innerHTML = '<span>💧</span> 관욕식을 마쳤습니다.';
+        setTimeout(() => {
+          if (typeof app.stepBackFromGwanyok === 'function') {
+            app.stepBackFromGwanyok();
+          }
+        }, 900);
         gwanyokResetTimer = setTimeout(() => {
           if (app.activeLocation && app.activeLocation.id === 'gwanyok' && !app.isGwanyokActive) {
             if (locationDesc) locationDesc.style.display = '';
