@@ -2489,17 +2489,28 @@ class Bomunsa3D {
         bCtx.fillRect(0, 0, 640, 720);
         bCtx.drawImage(img, 0, 0, 640, 720);
 
-        // 중앙 본존불은 큼직하고 선명하게 살리고 바깥쪽으로 갈수록 자연스럽게 어두워지는 타원형 그라데이션
+        // 중앙 본존불은 큼직하고 선명하게 살리고 위쪽이 둥근 아치형 광배처럼 자연스럽게 어두워지는 그라데이션
         bCtx.save();
-        bCtx.translate(320, 365);
-        bCtx.scale(1.0, 1.12);
-        const vGrad = bCtx.createRadialGradient(0, 0, 140, 0, 0, 295);
+        bCtx.translate(320, 355);
+        bCtx.scale(0.96, 1.18);
+        const vGrad = bCtx.createRadialGradient(0, 0, 125, 0, 0, 290);
         vGrad.addColorStop(0.0, 'rgba(5, 6, 8, 0.0)');
-        vGrad.addColorStop(0.45, 'rgba(5, 6, 8, 0.28)');
-        vGrad.addColorStop(0.76, 'rgba(5, 6, 8, 0.78)');
+        vGrad.addColorStop(0.42, 'rgba(5, 6, 8, 0.18)');
+        vGrad.addColorStop(0.74, 'rgba(5, 6, 8, 0.72)');
         vGrad.addColorStop(1.0, 'rgba(5, 6, 8, 1.0)');
         bCtx.fillStyle = vGrad;
-        bCtx.fillRect(-360, -360, 720, 720);
+        bCtx.fillRect(-380, -380, 760, 760);
+        bCtx.restore();
+
+        // 부처님 머리·상반신 뒤로 은은하게 퍼지는 자연스러운 원형 광배 빛무리
+        bCtx.save();
+        bCtx.globalCompositeOperation = 'screen';
+        const haloGrad = bCtx.createRadialGradient(320, 235, 24, 320, 255, 225);
+        haloGrad.addColorStop(0.0, 'rgba(255, 238, 198, 0.22)');
+        haloGrad.addColorStop(0.45, 'rgba(245, 220, 172, 0.10)');
+        haloGrad.addColorStop(1.0, 'rgba(245, 220, 172, 0.0)');
+        bCtx.fillStyle = haloGrad;
+        bCtx.fillRect(0, 0, 640, 720);
         bCtx.restore();
 
         const maskCanvas = document.createElement('canvas');
@@ -2507,15 +2518,15 @@ class Bomunsa3D {
         maskCanvas.height = 720;
         const kCtx = maskCanvas.getContext('2d');
         kCtx.save();
-        kCtx.translate(320, 365);
-        kCtx.scale(1.0, 1.12);
-        const mGrad = kCtx.createRadialGradient(0, 0, 155, 0, 0, 305);
+        kCtx.translate(320, 355);
+        kCtx.scale(0.96, 1.18);
+        const mGrad = kCtx.createRadialGradient(0, 0, 145, 0, 0, 295);
         mGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-        mGrad.addColorStop(0.55, 'rgba(255, 255, 255, 0.92)');
-        mGrad.addColorStop(0.82, 'rgba(255, 255, 255, 0.35)');
+        mGrad.addColorStop(0.50, 'rgba(255, 255, 255, 0.90)');
+        mGrad.addColorStop(0.78, 'rgba(255, 255, 255, 0.34)');
         mGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
         kCtx.fillStyle = mGrad;
-        kCtx.fillRect(-360, -360, 720, 720);
+        kCtx.fillRect(-380, -380, 760, 760);
         kCtx.restore();
 
         bCtx.globalCompositeOperation = 'destination-in';
@@ -2655,10 +2666,10 @@ class Bomunsa3D {
     });
 
     const upperShadowBand = new THREE.Mesh(
-      new THREE.BoxGeometry(width + 0.2, 0.52, depth - 0.2),
+      new THREE.BoxGeometry(width + 0.2, 0.24, depth - 0.2),
       midGreyStoneMat
     );
-    upperShadowBand.position.set(0, baseH + pillarH - 0.22, -0.05);
+    upperShadowBand.position.set(0, baseH + pillarH - 0.04, -0.05);
     group.add(upperShadowBand);
 
     // 4. 좌·우 아치형 출입문 (사진 속 양옆 출입문)
@@ -2700,18 +2711,18 @@ class Bomunsa3D {
     const centerPortal = new THREE.Group();
     centerPortal.position.set(0, baseH, (depth - 1.0) / 2 - 0.32);
 
-    // 깊숙한 석굴 암실 터널 (좌·우·상단·뒷벽 어두운 석재)
-    const grottoBack = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.2, 0.2), deepDarkGreyMat);
-    grottoBack.position.set(0, 1.6, -2.4);
+    // 깊숙한 석굴 암실 터널 (좌·우·상단·뒷벽 어두운 석재 - 아치 상단까지 자연스럽게 개방)
+    const grottoBack = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.65, 0.2), deepDarkGreyMat);
+    grottoBack.position.set(0, 1.825, -2.4);
     centerPortal.add(grottoBack);
 
     const grottoTop = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.2, 2.5), deepDarkGreyMat);
-    grottoTop.position.set(0, 3.15, -1.2);
+    grottoTop.position.set(0, 3.56, -1.2);
     centerPortal.add(grottoTop);
 
     [-1.30, 1.30].forEach((gx) => {
-      const grottoSide = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.2, 2.5), deepDarkGreyMat);
-      grottoSide.position.set(gx, 1.6, -1.2);
+      const grottoSide = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.65, 2.5), deepDarkGreyMat);
+      grottoSide.position.set(gx, 1.825, -1.2);
       centerPortal.add(grottoSide);
     });
 
@@ -3523,14 +3534,36 @@ class Bomunsa3D {
     const grottoRockMat = new THREE.MeshStandardMaterial({ color: 0x625d56, roughness: 0.92, flatShading: true });
     const caveDeepMat = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 1.0, side: THREE.DoubleSide });
 
-    // (1) 넓은 야외 화강암 노상 마당 (좌·우 돌출부 없이 여러 참배객이 방석 위에 나란히 앉을 수 있는 평탄한 돌 바닥)
+    // (1) 넓은 야외 화강암 노상 마당 (지평선까지 이어져 바닥공간에 하늘이 비치지 않도록 충분히 확장)
+    const outerEarthGround = new THREE.Mesh(
+      new THREE.CylinderGeometry(145, 145, 0.30, 48),
+      new THREE.MeshStandardMaterial({ color: 0x6b6a64, roughness: 0.95 })
+    );
+    outerEarthGround.position.set(0, -0.17, -4.5);
+    outerEarthGround.receiveShadow = true;
+    this.seokguramGroup.add(outerEarthGround);
+
     const courtyardBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(24, 24, 0.28, 40),
+      new THREE.CylinderGeometry(28, 28, 0.28, 40),
       graniteMidMat
     );
     courtyardBase.position.set(0, -0.145, -4.5);
     courtyardBase.receiveShadow = true;
     this.seokguramGroup.add(courtyardBase);
+
+    // 참배자 등 뒤와 좌·우 외곽을 감싸는 사찰 돌담 및 자연 암반·수풀 (뒤·바닥 공간에서 하늘이 보이지 않도록 차폐)
+    const rearWall = new THREE.Mesh(new THREE.BoxGeometry(56, 4.2, 1.4), graniteMidMat);
+    rearWall.position.set(0, 1.9, 13.5);
+    this.seokguramGroup.add(rearWall);
+    const rearWallCap = new THREE.Mesh(new THREE.BoxGeometry(56.4, 0.28, 1.65), graniteDarkMat);
+    rearWallCap.position.set(0, 4.1, 13.5);
+    this.seokguramGroup.add(rearWallCap);
+
+    [-20, 20].forEach((sx) => {
+      const sideFence = new THREE.Mesh(new THREE.BoxGeometry(1.4, 4.0, 32), graniteMidMat);
+      sideFence.position.set(sx, 1.8, -1.5);
+      this.seokguramGroup.add(sideFence);
+    });
 
     // (2) 상단 화강암 월대(기단)
     const upperTerrace = new THREE.Mesh(new THREE.BoxGeometry(10.6, 0.56, 3.6), graniteMidMat);
@@ -3547,17 +3580,17 @@ class Bomunsa3D {
     this.seokguramGroup.add(caveFloor);
 
     const caveCeiling = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.18, 4.4), caveDeepMat);
-    caveCeiling.position.set(0, 4.25, -11.55);
+    caveCeiling.position.set(0, 4.35, -11.55);
     this.seokguramGroup.add(caveCeiling);
 
     [-1.68, 1.68].forEach((cx) => {
-      const caveSide = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.85, 4.4), caveDeepMat);
-      caveSide.position.set(cx, 2.38, -11.55);
+      const caveSide = new THREE.Mesh(new THREE.BoxGeometry(0.18, 4.0, 4.4), caveDeepMat);
+      caveSide.position.set(cx, 2.42, -11.55);
       this.seokguramGroup.add(caveSide);
     });
 
-    const caveBackWall = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3.9, 0.2), caveDeepMat);
-    caveBackWall.position.set(0, 2.38, -13.55);
+    const caveBackWall = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4.05, 0.2), caveDeepMat);
+    caveBackWall.position.set(0, 2.42, -13.55);
     this.seokguramGroup.add(caveBackWall);
 
     // 석굴 감실 안쪽 깊숙히 배치된 본존불 사진 (세로 비율을 바로잡고 깊이와 크기를 절제)
@@ -3584,9 +3617,22 @@ class Bomunsa3D {
       wallPier.position.set(wx, 2.45, -9.45);
       this.seokguramGroup.add(wallPier);
     });
-    // 중앙 아치 상부 인방벽 (아치 윗부분을 막아 감실 안쪽만 개방)
-    const centerTopSpandrel = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.82, 0.55), graniteMidMat);
-    centerTopSpandrel.position.set(0, 3.96, -9.45);
+    // 중앙 아치 상부 인방벽 (직선 절단 없이 둥근 아치 곡선을 따라 감실 윗부분을 감싸는 형태)
+    const archSpandrelShape = new THREE.Shape();
+    archSpandrelShape.moveTo(-1.28, 0);
+    archSpandrelShape.lineTo(-1.12, 0);
+    archSpandrelShape.absarc(0, 0, 1.12, Math.PI, 0, true);
+    archSpandrelShape.lineTo(1.28, 0);
+    archSpandrelShape.lineTo(1.28, 1.32);
+    archSpandrelShape.lineTo(-1.28, 1.32);
+    archSpandrelShape.closePath();
+    const archSpandrelGeo = new THREE.ExtrudeGeometry(archSpandrelShape, {
+      depth: 0.55,
+      bevelEnabled: false,
+      curveSegments: 28
+    });
+    const centerTopSpandrel = new THREE.Mesh(archSpandrelGeo, graniteMidMat);
+    centerTopSpandrel.position.set(0, 3.05, -9.45 - 0.275);
     this.seokguramGroup.add(centerTopSpandrel);
 
     // 중앙 아치 테두리 몰딩 (사진 속 중앙 감실의 두툼한 화강암 아치)
