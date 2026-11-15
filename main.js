@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
       locationTitle.textContent = loc.name;
     }
     locationDesc.textContent = loc.desc;
-    locationDesc.style.display = '';
+    locationDesc.style.display = (loc.id === 'gwanyok' && gwanyokSessionStarted) ? 'none' : '';
     if (locationTag) locationTag.style.display = 'none';
     if (gwanyokMeditationMsg) gwanyokMeditationMsg.style.display = 'none';
 
@@ -663,6 +663,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const step = Math.max(1, Math.min(3, gwanyokNextStep));
+    if (locationDesc) {
+      locationDesc.style.display = 'none';
+    }
     enterBtn.innerHTML = `<span>💧</span> ${GWANYOK_WATER_MSGS[step - 1]}`;
     if (gwanyokMeditationMsg) {
       gwanyokMeditationMsg.style.display = 'none';
@@ -695,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         enterBtn.innerHTML = '<span>💧</span> 관욕식을 마쳤습니다.';
         gwanyokResetTimer = setTimeout(() => {
           if (app.activeLocation && app.activeLocation.id === 'gwanyok' && !app.isGwanyokActive) {
+            if (locationDesc) locationDesc.style.display = '';
             enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
           }
         }, 3000);
@@ -713,6 +717,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!gwanyokSessionStarted) {
       gwanyokSessionStarted = true;
       gwanyokNextStep = 1;
+      if (locationDesc) {
+        locationDesc.style.display = 'none';
+      }
       if (gwanyokLadleBtn) {
         gwanyokLadleBtn.style.display = 'inline-flex';
         gwanyokLadleBtn.disabled = false;
@@ -764,6 +771,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!gwanyokSessionStarted) {
         gwanyokSessionStarted = true;
         gwanyokNextStep = 1;
+        if (locationDesc) {
+          locationDesc.style.display = 'none';
+        }
         if (gwanyokLadleBtn) {
           gwanyokLadleBtn.style.display = 'inline-flex';
           gwanyokLadleBtn.disabled = false;
@@ -1176,6 +1186,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {}
     soundGuideTip.addEventListener('click', dismissSoundGuide);
+  }
+
+  if (window.templeAudio && muteBtn) {
+    muteBtn.textContent = window.templeAudio.isTtsEnabled ? '🔊' : '🔇';
   }
 
   muteBtn.addEventListener('click', () => {

@@ -5,7 +5,11 @@ class TempleAudio {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
-    this.isTtsEnabled = true;
+    let savedTts = null;
+    try {
+      savedTts = localStorage.getItem('bomunsa_tts_enabled');
+    } catch (e) {}
+    this.isTtsEnabled = savedTts === null ? true : savedTts === '1';
     this.isAmbientPlaying = false;
     this.ambientNodes = [];
     this.masterGain = null;
@@ -97,6 +101,9 @@ class TempleAudio {
 
   toggleTts() {
     this.isTtsEnabled = !this.isTtsEnabled;
+    try {
+      localStorage.setItem('bomunsa_tts_enabled', this.isTtsEnabled ? '1' : '0');
+    } catch (e) {}
     if (!this.isTtsEnabled) {
       this.stopChant();
       this.stopSpeech();
