@@ -327,7 +327,7 @@ body.beomjong-ready .control-hint {
 /* 전각 근접 팝업 안내: [사용자 요청 반영: 거대하고 어두운 박스를 없애고 뒤의 탑과 전각이 100% 보이도록 투명화] */
 .location-card {
   position: absolute;
-  top: 94px;
+  top: 112px;
   left: 50%;
   transform: translateX(-50%) translateY(-20px);
   z-index: 10;
@@ -498,13 +498,14 @@ body.beomjong-ready .control-hint {
   box-shadow: none;
   padding: 0;
   max-width: 90vw;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 #temple-header-group {
   background: rgba(18, 16, 20, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  margin-top: 38px;
   padding: 5px 18px;
   border-radius: 18px;
   border: 1px solid rgba(212, 175, 55, 0.38);
@@ -571,7 +572,7 @@ body.beomjong-ready .control-hint {
   background: transparent;
   border: none;
   padding: 0;
-  margin-top: 6px;
+  margin-top: 14px;
   font-family: 'Noto Serif KR', serif;
   max-width: 94vw;
   text-align: center;
@@ -709,7 +710,7 @@ body.beomjong-ready .control-hint {
 /* [요청 반영] 부처님과 촛불 사이에 뜨는 명상 호흡 안내 */
 .breath-text-card {
   position: absolute;
-  top: 52%;
+  top: 49%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(18, 16, 20, 0.88);
@@ -840,10 +841,43 @@ body.beomjong-ready .control-hint {
   font-size: 0.80rem;
 }
 
-.menu-bottom-row .exit-btn {
-  flex: 0.9;
-  padding: 8px 6px;
-  font-size: 0.80rem;
+.meditation-drawer {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 20px;
+  background: rgba(16, 15, 20, 0.72);
+  border: 1px solid rgba(212, 175, 55, 0.34);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+}
+
+.meditation-menu-box.drawer-open .meditation-drawer {
+  display: flex;
+}
+
+.meditation-footer-bar {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+}
+
+.meditation-footer-bar .menu-toggle-btn {
+  flex: 1.45;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  border-color: rgba(212, 175, 55, 0.55);
+  background: rgba(22, 20, 24, 0.86);
+}
+
+.meditation-footer-bar .exit-btn {
+  flex: 0.75;
+  padding: 10px 10px;
+  font-size: 0.86rem;
   background: rgba(22, 20, 24, 0.85);
   border: 1px solid rgba(212, 175, 55, 0.45);
   backdrop-filter: blur(14px);
@@ -861,7 +895,7 @@ body.beomjong-ready .control-hint {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.menu-bottom-row .exit-btn:hover, .menu-bottom-row .exit-btn:active {
+.meditation-footer-bar .exit-btn:hover, .meditation-footer-bar .exit-btn:active {
   background: rgba(36, 32, 38, 0.95);
   border-color: rgba(245, 207, 98, 0.7);
   color: #ffffff;
@@ -907,10 +941,38 @@ body.beomjong-ready .control-hint {
   color: #f7eedf;
 }
 
+.chant-btn {
+  width: 100%;
+  padding: 7px 14px;
+  font-size: 0.83rem;
+  border-radius: 18px;
+}
+
+.chant-status-card {
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(16, 15, 20, 0.84);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f9f1dc;
+  padding: 7px 16px;
+  border-radius: 16px;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.80rem;
+  line-height: 1.45;
+  text-align: center;
+  max-width: min(360px, 88vw);
+  pointer-events: none;
+  z-index: 25;
+}
+
 /* [요청 반영: 부처님과 촛불 사이에 뜨는 삼배 안내 카드] */
 .bow-status-card {
   position: absolute;
-  top: 52%;
+  top: 49%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(18, 16, 20, 0.88);
@@ -919,14 +981,18 @@ body.beomjong-ready .control-hint {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   color: #fff9e6;
-  padding: 7px 20px;
+  padding: 8px 18px;
   border-radius: 20px;
   font-family: 'Noto Serif KR', serif;
   font-size: 0.86rem;
   font-weight: 700;
+  line-height: 1.45;
   text-align: center;
-  white-space: nowrap;
-  max-width: 90vw;
+  width: max-content;
+  max-width: min(90vw, 440px);
+  box-sizing: border-box;
+  white-space: normal;
+  word-break: keep-all;
   z-index: 20;
   pointer-events: none;
   animation: fadeIn 0.3s ease;
@@ -1099,7 +1165,7 @@ body.beomjong-ready .control-hint {
     font-size: 0.72rem;
   }
   .location-card {
-    top: 48px;
+    top: 92px;
     padding: 12px 18px;
     max-width: 420px;
   }
@@ -1200,6 +1266,16 @@ body.beomjong-ready .control-hint {
 body.in-meditation .presence-badge {
   top: 14px;
   left: 14px;
+}
+
+/* 관욕식에서는 카드를 조금 더 위로 올려 아기 부처님과 겹치지 않게 하고, 설명 아래 바가지 배치 */
+body.at-gwanyok .location-card {
+  top: 90px;
+}
+
+body.at-gwanyok .location-card-actions {
+  flex-direction: column;
+  gap: 10px;
 }
 
 .presence-badge.solo-mode {
@@ -1339,7 +1415,7 @@ body.in-meditation .presence-badge {
 /* 도량 내 참배객 합장 인사 버튼 */
 .greet-fab {
   position: fixed;
-  bottom: 126px;
+  bottom: 138px;
   right: 16px;
   z-index: 22;
   display: inline-flex;
@@ -1366,4 +1442,120 @@ body.in-meditation .presence-badge {
 
 body.in-meditation .greet-fab {
   display: none !important;
+}
+
+/* 오른쪽 하단 스피커 버튼 & 1회성 소리 안내 버튼 */
+.speaker-fab {
+  position: fixed;
+  bottom: 84px;
+  right: 16px;
+  z-index: 24;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(16, 18, 24, 0.84);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  color: #fff3cc;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: transform 0.16s ease;
+}
+
+.speaker-fab:active {
+  transform: scale(0.93);
+}
+
+body.in-meditation .speaker-fab {
+  bottom: 146px;
+  right: 14px;
+}
+
+.sound-guide-tip {
+  position: fixed;
+  bottom: 86px;
+  right: 66px;
+  z-index: 24;
+  max-width: min(70vw, 270px);
+  padding: 8px 13px;
+  border-radius: 14px;
+  background: rgba(20, 17, 14, 0.90);
+  border: 1px solid rgba(212, 175, 55, 0.60);
+  color: #ffeab3;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 0.77rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+body.in-meditation .sound-guide-tip {
+  bottom: 148px;
+  right: 64px;
+}
+
+/* 관욕식 작은 바가지 버튼 */
+.location-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gwanyok-ladle-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff6dc 0%, #f0d48a 100%);
+  border: 1.5px solid #b38428;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.gwanyok-ladle-btn:active {
+  transform: scale(0.92);
+}
+
+.gwanyok-ladle-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ladle-svg {
+  width: 28px;
+  height: 28px;
+}
+
+.ladle-step-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #2b7cd3;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
 }

@@ -17,6 +17,8 @@ class TempleSync {
     this.joinedAt = Date.now();
     this.supabase = null;
     this.channel = null;
+    this.isChannelSubscribed = false;
+    this.lastSentSignature = '';
     this.isConfigured = Boolean(
       this.config.supabaseUrl &&
       this.config.supabaseAnonKey &&
@@ -121,6 +123,7 @@ class TempleSync {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          this.isChannelSubscribed = true;
           const spawn = this.getInitialSpawnPos();
           await this.channel.track({
             clientId: this.clientId,
@@ -130,10 +133,14 @@ class TempleSync {
             rotY: Math.PI,
             isWalking: false,
             mode: 'outside',
+            isBowing: false,
+            bowSeq: 0,
             busyLoc: null,
             queueLoc: null,
             queuedAt: null
           });
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          this.isChannelSubscribed = false;
         }
       });
 
@@ -194,6 +201,8 @@ class TempleSync {
             rotY: u.rotY ?? Math.PI,
             isWalking: Boolean(u.isWalking),
             mode: u.mode || 'outside',
+            isBowing: Boolean(u.isBowing),
+            bowSeq: u.bowSeq || 0,
             busyLoc: u.busyLoc || null,
             queueLoc: u.queueLoc || null,
             queuedAt: u.queuedAt || null,
@@ -220,33 +229,50 @@ class TempleSync {
   }
 
   broadcastState(state, force = false) {
-    if (!this.isConfigured || !this.channel || this.isObserverOnly) return;
+    if (!this.isConfigured || !this.channel || !this.isChannelSubscribed || this.isObserverOnly) return;
     const now = performance.now();
+    const x = Number(state.x.toFixed(2));
+    const z = Number(state.z.toFixed(2));
+    const rotY = Number(state.rotY.toFixed(2));
+    const isWalking = Boolean(state.isWalking);
+    const mode = state.mode || 'outside';
+    const isBowing = Boolean(state.isBowing);
+    const bowSeq = state.bowSeq || 0;
+    const busyLoc = state.busyLoc || null;
+    const queueLoc = state.queueLoc || null;
+    const queuedAt = state.queuedAt || null;
+
+    const sig = `${x}|${z}|${rotY}|${isWalking}|${mode}|${isBowing}|${bowSeq}|${busyLoc || ''}|${queueLoc || ''}`;
+    const changed = sig !== this.lastSentSignature;
+
     if (!force) {
-      if (state.isWalking && now - this.lastBroadcastTime < 120) return;
-      if (!state.isWalking && now - this.lastBroadcastTime < 60) return;
+      if (changed && now - this.lastBroadcastTime < 120) return;
+      if (!changed && now - this.lastBroadcastTime < 3000) return;
     }
     this.lastBroadcastTime = now;
+    this.lastSentSignature = sig;
 
     this.channel.send({
       type: 'broadcast',
       event: 'move',
       payload: {
         clientId: this.clientId,
-        x: Number(state.x.toFixed(2)),
-        z: Number(state.z.toFixed(2)),
-        rotY: Number(state.rotY.toFixed(2)),
-        isWalking: Boolean(state.isWalking),
-        mode: state.mode || 'outside',
-        busyLoc: state.busyLoc || null,
-        queueLoc: state.queueLoc || null,
-        queuedAt: state.queuedAt || null
+        x,
+        z,
+        rotY,
+        isWalking,
+        mode,
+        isBowing,
+        bowSeq,
+        busyLoc,
+        queueLoc,
+        queuedAt
       }
     });
   }
 
   sendGreeting(targetClientId = null) {
-    if (!this.isConfigured || !this.channel || this.isObserverOnly) return;
+    if (!this.isConfigured || !this.channel || !this.isChannelSubscribed || this.isObserverOnly) return;
     this.channel.send({
       type: 'broadcast',
       event: 'greet',
@@ -255,6 +281,67 @@ class TempleSync {
         targetClientId
       }
     });
+  }
+
+  // ==============================
+  // 도량 누적 방문자수 조회 및 증가 (Supabase 미설정/미생성 시 localStorage 폴백)
+  // ==============================
+  async fetchTotalVisitors(shouldIncrement = false) {
+    const alreadyCounted = sessionStorage.getItem('bomunsa_session_visited') === '1';
+    const canIncrement = Boolean(shouldIncrement && !alreadyCounted);
+
+    if (!this.isConfigured || !this.supabase) {
+      return this.getLocalTotalVisitors(canIncrement);
+    }
+
+    try {
+      if (canIncrement) {
+        const { data, error } = await this.supabase.rpc('increment_total_visitors');
+        if (!error && typeof data === 'number') {
+          sessionStorage.setItem('bomunsa_session_visited', '1');
+          return data;
+        }
+      }
+      const { data: row, error: selErr } = await this.supabase
+        .from('temple_stats')
+        .select('count')
+        .eq('key', 'total_visitors')
+        .single();
+      if (!selErr && row && typeof row.count === 'number') {
+        if (canIncrement) {
+          sessionStorage.setItem('bomunsa_session_visited', '1');
+        }
+        return row.count;
+      }
+
+      // temple_stats 테이블 생성 전이라면 기존 prayers 기록의 고유 방문자 수 + 로컬 방문 수로 추산
+      const { data: prayerOwners, error: pErr } = await this.supabase
+        .from('prayers')
+        .select('owner_id');
+      if (!pErr && Array.isArray(prayerOwners)) {
+        const uniqueOwners = new Set(prayerOwners.map(r => r.owner_id).filter(Boolean));
+        const localCount = this.getLocalTotalVisitors(canIncrement);
+        const total = Math.max(uniqueOwners.size + (canIncrement ? 1 : 0), uniqueOwners.size, localCount);
+        if (canIncrement) {
+          localStorage.setItem('bomunsa_total_visitors', String(total));
+          sessionStorage.setItem('bomunsa_session_visited', '1');
+        }
+        return total;
+      }
+    } catch (e) {}
+
+    return this.getLocalTotalVisitors(canIncrement);
+  }
+
+  getLocalTotalVisitors(shouldIncrement) {
+    let count = parseInt(localStorage.getItem('bomunsa_total_visitors') || '0', 10);
+    if (Number.isNaN(count) || count < 0) count = 0;
+    if (shouldIncrement) {
+      count += 1;
+      localStorage.setItem('bomunsa_total_visitors', String(count));
+      sessionStorage.setItem('bomunsa_session_visited', '1');
+    }
+    return Math.max(1, count);
   }
 
   // ==============================

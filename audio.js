@@ -5,6 +5,7 @@ class TempleAudio {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
+    this.isTtsEnabled = true;
     this.isAmbientPlaying = false;
     this.ambientNodes = [];
     this.masterGain = null;
@@ -24,12 +25,32 @@ class TempleAudio {
     this.yoryeongAudio.preload = 'auto';
     this.yoryeongAudio.loop = true;
 
+    // 단타 목탁 상태 (삼배 등)
+    this.singleMoktakAudio = new Audio('단타목탁.wav');
+    this.singleMoktakAudio.preload = 'auto';
+
     // 풍경소리 루프 상태 (산령각)
     this.isWindChimeLooping = false;
     this.windChimeInterval = null;
+    this.windChimeAudio = new Audio('풍경소리.wav');
+    this.windChimeAudio.preload = 'auto';
+    this.windChimeAudio.loop = true;
 
     // 산속 새소리 스케줄러
     this.birdTimeout = null;
+
+    // 전각별 경전 독송(비구니 톤 MP3 우선 + TTS 폴백) 상태
+    this.isChanting = false;
+    this.chantSessionId = 0;
+    this.chantTimer = null;
+    this.chantUtterance = null;
+    this.chantAudio = null;
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.getVoices) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
   }
 
   init() {
@@ -61,7 +82,281 @@ class TempleAudio {
     if (this.moktakAudio) {
       this.moktakAudio.muted = this.isMuted;
     }
+    if (this.singleMoktakAudio) {
+      this.singleMoktakAudio.muted = this.isMuted;
+    }
+    if (this.windChimeAudio) {
+      this.windChimeAudio.muted = this.isMuted;
+    }
+    if (this.isMuted) {
+      this.stopChant();
+      this.stopSpeech();
+    }
     return this.isMuted;
+  }
+
+  toggleTts() {
+    this.isTtsEnabled = !this.isTtsEnabled;
+    if (!this.isTtsEnabled) {
+      this.stopChant();
+      this.stopSpeech();
+    }
+    return this.isTtsEnabled;
+  }
+
+  pickKoreanNunVoice() {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !window.speechSynthesis.getVoices) {
+      return null;
+    }
+    const voices = window.speechSynthesis.getVoices() || [];
+    const koVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ko'));
+    if (koVoices.length === 0) return null;
+    const femaleKeywords = ['sunhi', 'heami', 'soonbok', 'yuna', 'sora', 'female', '여성', 'google 한국의'];
+    const maleKeywords = ['injoon', 'hyunsu', 'bongjin', 'gookmin', 'jimin', 'male', '남성'];
+    const preferredFemale = koVoices.find(v => {
+      const n = (v.name || '').toLowerCase();
+      return femaleKeywords.some(k => n.includes(k));
+    });
+    if (preferredFemale) return preferredFemale;
+    const nonMale = koVoices.find(v => {
+      const n = (v.name || '').toLowerCase();
+      return !maleKeywords.some(k => n.includes(k));
+    });
+    return nonMale || koVoices[0];
+  }
+
+  getScriptureData(hallId) {
+    const scriptures = {
+      seokguram: {
+        title: '천수경',
+        file: '천수경.mp3',
+        lines: [
+          '정구업진언. 수리수리 마하수리 수수리 사바하.',
+          '개경게. 무상심심미묘법 백천만겁난조우 아금문견득수지 원해여래진실의.',
+          '개법장진언. 옴 아라남 아라다.',
+          '천수천안 관자재보살 광대원만 무애대비심 대다라니 계청.',
+          '나무 관세음보살 마하살.',
+          '신묘장구대다라니.',
+          '나모라 다나다라 야야 나막알야 바로기제 새바라야 모지사다바야 마하사다바야 마하가로 니가야.',
+          '옴 살바 바예수 다라나 가라야 다사명 나막 가리다바 이맘알야 바로기제 새바라 다바 니라간타.',
+          '나막 하리나야 마발다 이사미 살발타 사다남 수반 아예염 살바 보다남 바바마라 미수다감.',
+          '다냐타 옴 아로게 아로가 마지로가 지가란제 혜혜하례 마하모지 사다바.',
+          '사마라 사마라 하리나야 구로구로 갈마 사다야 사다야 도로도로 미연제 마하 미연제.',
+          '다라다라 다린 나례 새바라 자라자라 마라 미마라 아마라 몰제 예혜혜 로게 새바라.',
+          '라아 미사미 나사야 나베 사미사미 나사야 모하자라 미사미 나사야 호로호로 마라호로.',
+          '사라사라 시리시리 소로소로 못자못자 모다야 모다야 매다리야 니라간타 가마사 날사남.',
+          '바라하라 나야 마낙 사바하. 싯다야 사바하. 마하싯다야 사바하.',
+          '원아금차 치송지 천수다라니 신주. 일체중생 이고득락 성불도.'
+        ]
+      },
+      daewoong: {
+        title: '반야심경',
+        file: '반야심경.mp3',
+        lines: [
+          '마하반야바라밀다심경.',
+          '관자재보살 행심반야바라밀다시 조견오온개공 도일체고액.',
+          '사리자. 색불이공 공불이색 색즉시공 공즉시색 수상행식 역부여시.',
+          '사리자. 시제법공상 불생불멸 불구부정 부증불감.',
+          '시고 공중무색 무수상행식 무안이비설신의 무색성향미촉법.',
+          '무안계 내지 무의식계 무무명 역무무명진 내지 무노사 역무노사진.',
+          '무고집멸도 무지 역무득 이무소득고.',
+          '보리살타 의반야바라밀다고 심무가애 무가애고 무유공포 원리전도몽상 구경열반.',
+          '삼세제불 의반야바라밀다고 득아뇩다라삼먁삼보리.',
+          '고지 반야바라밀다 시대신주 시대명주 시무상주 시무등등주 능제일체고 진실불허.',
+          '고설 반야바라밀다주 즉설주왈.',
+          '아제아제 바라아제 바라승아제 모지 사바하.',
+          '아제아제 바라아제 바라승아제 모지 사바하.',
+          '아제아제 바라아제 바라승아제 모지 사바하.'
+        ]
+      },
+      jijang: {
+        title: '멸업장진언',
+        file: '멸업장진언.mp3',
+        lines: [
+          '지장보살 멸업장진언.',
+          '나무 대원본존 지장보살 마하살.',
+          '옴 바라 마니다니 사바하.',
+          '옴 바라 마니다니 사바하.',
+          '옴 바라 마니다니 사바하.',
+          '일체 업장이 맑게 소멸되고, 모든 중생이 평안과 해탈을 얻기를 발원합니다.',
+          '옴 바라 마니다니 사바하.',
+          '옴 바라 마니다니 사바하.',
+          '옴 바라 마니다니 사바하.'
+        ]
+      },
+      sansin: {
+        title: '화엄경 약찬게',
+        file: '화엄경_약찬게.mp3',
+        lines: [
+          '대방광불 화엄경, 용수보살 약찬게.',
+          '나무 화장세계 해회불보살.',
+          '대방광불 화엄경, 주세신중 무량중.',
+          '제대보살 마하살, 보현보살 위상수.',
+          '여래현상 품제이, 보현삼매 제삼품.',
+          '세계성취 화엄장, 비로자나 여래명.',
+          '사성제법 광명각, 보살문명 정행품.',
+          '현수보살 수미정, 십주십행 십회향.',
+          '십지십정 여래상, 보현행원 입법계.',
+          '선재동자 선지식, 오십삼선 지식처.',
+          '보현보살 십대원, 원왕생 극락세계.',
+          '나무 대방광불 화엄경, 나무 화장세계 해회불보살.'
+        ]
+      }
+    };
+    return scriptures[hallId] || null;
+  }
+
+  startChant(hallId, onLineChange, onComplete) {
+    const data = this.getScriptureData(hallId);
+    if (!data) return false;
+    if (this.isMuted) return false;
+
+    this.stopChant();
+    this.isChanting = true;
+    this.chantSessionId += 1;
+    const sessionId = this.chantSessionId;
+
+    const startTtsFallback = () => {
+      if (!this.isChanting || sessionId !== this.chantSessionId || this.isMuted) return;
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+        this.isChanting = false;
+        if (onComplete) onComplete();
+        return;
+      }
+      const voice = this.pickKoreanNunVoice();
+      let idx = 0;
+
+      const speakNext = () => {
+        if (!this.isChanting || sessionId !== this.chantSessionId || this.isMuted) return;
+        if (idx >= data.lines.length) {
+          this.isChanting = false;
+          this.chantUtterance = null;
+          if (onComplete) onComplete();
+          return;
+        }
+        const lineText = data.lines[idx];
+        if (onLineChange) onLineChange(data.title, lineText, idx, data.lines.length);
+
+        try {
+          const utter = new SpeechSynthesisUtterance(lineText);
+          utter.lang = 'ko-KR';
+          utter.rate = 0.74;
+          utter.pitch = 0.84;
+          utter.volume = 0.65;
+          if (voice) utter.voice = voice;
+          utter.onend = () => {
+            if (!this.isChanting || sessionId !== this.chantSessionId) return;
+            idx += 1;
+            this.chantTimer = setTimeout(speakNext, 420);
+          };
+          utter.onerror = () => {
+            if (!this.isChanting || sessionId !== this.chantSessionId) return;
+            this.isChanting = false;
+            this.chantUtterance = null;
+            if (onComplete) onComplete();
+          };
+          this.chantUtterance = utter;
+          window.speechSynthesis.speak(utter);
+        } catch (e) {
+          this.isChanting = false;
+          this.chantUtterance = null;
+          if (onComplete) onComplete();
+        }
+      };
+
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+      this.chantTimer = setTimeout(speakNext, 80);
+    };
+
+    if (data.file) {
+      try {
+        const audio = new Audio(data.file);
+        audio.volume = 0.72;
+        audio.muted = this.isMuted;
+        audio.onended = () => {
+          if (!this.isChanting || sessionId !== this.chantSessionId) return;
+          this.isChanting = false;
+          this.chantAudio = null;
+          if (onComplete) onComplete();
+        };
+        audio.onerror = () => {
+          if (!this.isChanting || sessionId !== this.chantSessionId) return;
+          this.chantAudio = null;
+          startTtsFallback();
+        };
+        this.chantAudio = audio;
+        if (onLineChange) onLineChange(data.title, '비구니 스님의 고요한 독경 소리가 이어집니다...', 0, 1);
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {
+            if (!this.isChanting || sessionId !== this.chantSessionId) return;
+            this.chantAudio = null;
+            startTtsFallback();
+          });
+        }
+        return true;
+      } catch (e) {
+        this.chantAudio = null;
+      }
+    }
+
+    startTtsFallback();
+    return true;
+  }
+
+  stopChant() {
+    this.isChanting = false;
+    this.chantSessionId += 1;
+    if (this.chantAudio) {
+      try {
+        this.chantAudio.pause();
+        this.chantAudio.currentTime = 0;
+      } catch (e) {}
+      this.chantAudio = null;
+    }
+    if (this.chantTimer) {
+      clearTimeout(this.chantTimer);
+      this.chantTimer = null;
+    }
+    this.chantUtterance = null;
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
+  }
+
+  toggleChant(hallId, onLineChange, onComplete) {
+    if (this.isChanting) {
+      this.stopChant();
+      return false;
+    }
+    return this.startChant(hallId, onLineChange, onComplete);
+  }
+
+  speakDescription(text) {
+    if (!this.isTtsEnabled || !text) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(String(text).trim());
+      utter.lang = 'ko-KR';
+      utter.rate = 0.92;
+      utter.pitch = 1.0;
+      const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+      const koVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ko'));
+      if (koVoice) utter.voice = koVoice;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  stopSpeech() {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
   }
 
   playTempleBell() {
@@ -138,6 +433,19 @@ class TempleAudio {
   playSingleMoktak() {
     this.resume();
     if (this.isMuted) return;
+    if (this.singleMoktakAudio) {
+      try {
+        this.singleMoktakAudio.pause();
+        this.singleMoktakAudio.currentTime = 0;
+        this.singleMoktakAudio.volume = 0.88;
+        this.singleMoktakAudio.muted = this.isMuted;
+        const p = this.singleMoktakAudio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => this.playSynthMoktakFallback());
+        }
+        return;
+      } catch (e) {}
+    }
     this.playSynthMoktakFallback();
   }
 
@@ -299,10 +607,25 @@ class TempleAudio {
       this.stopMoktakLoop();
       this.stopYoryeongLoop();
       this.isWindChimeLooping = true;
-      this.playWindChime();
-      this.windChimeInterval = setInterval(() => {
+      if (this.windChimeAudio) {
+        this.windChimeAudio.currentTime = 0;
+        this.windChimeAudio.volume = 0.85;
+        this.windChimeAudio.muted = this.isMuted;
+        const p = this.windChimeAudio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {
+            this.playWindChime();
+            this.windChimeInterval = setInterval(() => {
+              this.playWindChime();
+            }, 3600);
+          });
+        }
+      } else {
         this.playWindChime();
-      }, 3600);
+        this.windChimeInterval = setInterval(() => {
+          this.playWindChime();
+        }, 3600);
+      }
       if (callback) callback(true);
       return true;
     }
@@ -310,6 +633,12 @@ class TempleAudio {
 
   stopWindChimeLoop() {
     this.isWindChimeLooping = false;
+    if (this.windChimeAudio) {
+      try {
+        this.windChimeAudio.pause();
+        this.windChimeAudio.currentTime = 0;
+      } catch (e) {}
+    }
     if (this.windChimeInterval) {
       clearInterval(this.windChimeInterval);
       this.windChimeInterval = null;

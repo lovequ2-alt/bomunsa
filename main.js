@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // UI 캐싱
   const muteBtn = document.getElementById('mute-btn');
-  const fullscreenBtn = document.getElementById('fullscreen-btn');
   const locationCard = document.getElementById('location-card');
   const locationTitle = document.getElementById('location-title');
   const locationTag = document.getElementById('location-tag');
@@ -28,6 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const bellReturnBtn = document.getElementById('bell-return-btn');
   const gwanyokMeditationMsg = document.getElementById('gwanyok-meditation-msg');
   let bellMsgTimer = null;
+  const gwanyokLadleBtn = document.getElementById('gwanyok-ladle-btn');
+  const gwanyokLadleBadge = document.getElementById('gwanyok-ladle-badge');
+  let gwanyokNextStep = 1;
+  let gwanyokSessionStarted = false;
+  let gwanyokResetTimer = null;
 
   function setBellReturnVisible(visible) {
     if (bellReturnBtn) {
@@ -56,6 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const bowText = document.getElementById('bow-text');
   const bowStatusCard = document.getElementById('bow-status-card');
   const bowStatusText = document.getElementById('bow-status-text');
+  const meditationMenuBox = document.getElementById('meditation-menu-box');
+  const meditationMenuToggle = document.getElementById('meditation-menu-toggle');
+  const meditationMenuToggleText = document.getElementById('meditation-menu-toggle-text');
+  const chantBtn = document.getElementById('chant-btn');
+  const chantText = document.getElementById('chant-text');
+  const chantStatusCard = document.getElementById('chant-status-card');
+  const chantStatusText = document.getElementById('chant-status-text');
   const instrumentBtn = document.getElementById('instrument-btn');
   const instrumentText = document.getElementById('instrument-text');
   const candleBtn = document.getElementById('candle-btn');
@@ -175,17 +186,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // 하얀 연꽃 로고 공통 SVG 마크업
   const WHITE_LOTUS_SVG = '<svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>';
 
-  // 동시접속 인원 배지 및 실시간 동기화 연결
+  // 동시접속 인원 배지, 누적 방문자수 및 실시간 동기화 연결
   const presenceBadge = document.getElementById('presence-badge');
+  let currentTotalVisitors = 1;
+  let currentOnlineCount = 1;
+  function updateTopStatsBadge() {
+    if (!presenceBadge) return;
+    presenceBadge.textContent = `👥 누적 방문 ${currentTotalVisitors.toLocaleString()}명 · 도량 ${currentOnlineCount}명`;
+    presenceBadge.classList.remove('solo-mode');
+  }
   if (window.templeSync) {
-    if (presenceBadge && !window.templeSync.isConfigured) {
-      presenceBadge.textContent = '👥 도량 1명';
+    if (typeof window.templeSync.fetchTotalVisitors === 'function') {
+      window.templeSync.fetchTotalVisitors(false).then((total) => {
+        if (typeof total === 'number') {
+          currentTotalVisitors = total;
+          updateTopStatsBadge();
+        }
+      });
     }
+    updateTopStatsBadge();
     window.templeSync.onPresenceChange = ({ count, isConfigured }) => {
-      if (!presenceBadge) return;
-      const displayCount = isConfigured ? (count || 1) : 1;
-      presenceBadge.textContent = `👥 도량 ${displayCount}명`;
-      presenceBadge.classList.remove('solo-mode');
+      currentOnlineCount = isConfigured ? (count || 1) : 1;
+      updateTopStatsBadge();
     };
     window.templeSync.onRemoteStatesChange = (states) => {
       if (app.syncRemotePilgrims) {
@@ -335,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (locationId === 'jijang') {
       jijangPrayers = myPrayers;
       if (app.syncJijangLanterns) {
-        app.syncJijangLanterns(prayers.length);
+        app.syncJijangLanterns(myPrayers.length, Math.max(0, prayers.length - myPrayers.length));
       }
       if (openPrayerText) {
         openPrayerText.textContent = myPrayers.length > 0 ? '영가등 추가하고 소원빌기' : '영가등 올리고 소원빌기';
@@ -444,12 +466,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 1. 전각 근접 시 카드 업데이트
   const hojimunPill = document.querySelector('.nav-pill[data-id="hojimun"]');
+  let lastSpokenLocId = null;
+  let hasUserInteracted = false;
+  function speakLocation(loc, force = false) {
+    if (!loc || (!loc.name && !loc.desc)) return;
+    if (!force && loc.id === lastSpokenLocId) return;
+    lastSpokenLocId = loc.id;
+    const cleanName = (loc.name || '').replace(/\([^)]*[\u4e00-\u9fff][^)]*\)/g, '').trim();
+    const spokenText = cleanName && loc.desc
+      ? `${cleanName}. ${loc.desc}`
+      : (loc.desc || cleanName);
+    window.templeAudio?.speakDescription(spokenText);
+  }
+  const markUserInteracted = (e) => {
+    hasUserInteracted = true;
+    // 스플래시 화면 클릭이 아닌 도량 내 어떤 요소라도 한 번 누르면 이동 안내 문구 영구 숨김
+    if (splashOverlay && !splashOverlay.classList.contains('hidden')) return;
+    const controlHintEl = document.getElementById('control-hint');
+    if (controlHintEl) {
+      controlHintEl.style.display = 'none';
+    }
+  };
+  document.addEventListener('pointerdown', markUserInteracted, { passive: true });
+  document.addEventListener('touchstart', markUserInteracted, { passive: true });
+
   window.onLocationChanged = (loc) => {
     if (bellMsgTimer) {
       clearTimeout(bellMsgTimer);
       bellMsgTimer = null;
     }
+    document.body.classList.toggle('at-gwanyok', Boolean(loc && loc.id === 'gwanyok'));
     if (!loc) {
+      lastSpokenLocId = null;
+      gwanyokNextStep = 1;
+      gwanyokSessionStarted = false;
+      if (gwanyokResetTimer) {
+        clearTimeout(gwanyokResetTimer);
+        gwanyokResetTimer = null;
+      }
+      if (gwanyokLadleBtn) gwanyokLadleBtn.style.display = 'none';
+      if (gwanyokLadleBadge) gwanyokLadleBadge.style.display = 'none';
+      window.templeAudio?.stopSpeech();
       locationCard.classList.remove('visible');
       navPills.forEach(p => p.classList.remove('active'));
       if (hojimunPill) hojimunPill.textContent = '🚪 입구';
@@ -484,6 +541,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loc.enterable) {
       enterBtn.style.display = 'flex';
+      if (gwanyokLadleBtn) {
+        gwanyokLadleBtn.style.display = (loc.id === 'gwanyok' && gwanyokSessionStarted && !loc.occupiedByOther) ? 'inline-flex' : 'none';
+        gwanyokLadleBtn.disabled = Boolean(app.isGwanyokActive);
+      }
       if (loc.occupiedByOther) {
         enterBtn.disabled = true;
         const rankText = loc.queueRank > 0
@@ -508,6 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } else if (loc.id === 'gwanyok') {
           enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
+        } else if (loc.id === 'seokguram') {
+          enterBtn.innerHTML = '<span>🙏</span> 기도하기';
         } else {
           enterBtn.innerHTML = '<span>🚪</span> 전각 안으로 입장하기';
         }
@@ -521,6 +584,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     locationCard.classList.add('visible');
+
+    if (hasUserInteracted && (loc.name || loc.desc) && loc.id !== lastSpokenLocId) {
+      speakLocation(loc);
+    }
 
     navPills.forEach(p => {
       if (p.dataset.id === loc.id) p.classList.add('active');
@@ -539,6 +606,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const id = btn.dataset.id;
       locationCard.classList.remove('visible'); // [요청 반영] 이동 중에는 팝업을 닫고, 바로 앞에 설 때까지 대기!
       if (id === 'hojimun' && ((app.activeLocation && app.activeLocation.id === 'hojimun') || app.playerPos.z >= 29.5)) {
+        if (window.templeSync && typeof window.templeSync.fetchTotalVisitors === 'function') {
+          window.templeSync.fetchTotalVisitors(true).then((total) => {
+            if (typeof total === 'number') {
+              currentTotalVisitors = total;
+              updateTopStatsBadge();
+            }
+          });
+        }
         if (app.enterTempleGate) app.enterTempleGate();
         return;
       }
@@ -571,6 +646,84 @@ document.addEventListener('DOMContentLoaded', () => {
       bowBtn.classList.add('active');
       bowText.textContent = '탑돌이 멈추기';
     }
+  };
+
+  const GWANYOK_WATER_MSGS = [
+    '탐욕을 씻어냄 · 욕심과 집착을 비우고 마음을 맑힙니다.',
+    '성냄을 씻어냄 · 화와 미움을 내려놓고 자비심을 키웁니다.',
+    '어리석음을 씻어냄 · 무지와 편견을 씻고 지혜의 눈을 뜹니다.'
+  ];
+
+  function triggerGwanyokLadle() {
+    if (!app.activeLocation || app.activeLocation.id !== 'gwanyok') return;
+    if (app.isGwanyokActive) return;
+    if (gwanyokResetTimer) {
+      clearTimeout(gwanyokResetTimer);
+      gwanyokResetTimer = null;
+    }
+
+    const step = Math.max(1, Math.min(3, gwanyokNextStep));
+    enterBtn.innerHTML = `<span>💧</span> ${GWANYOK_WATER_MSGS[step - 1]}`;
+    if (gwanyokMeditationMsg) {
+      gwanyokMeditationMsg.style.display = 'none';
+    }
+    if (gwanyokLadleBtn) {
+      gwanyokLadleBtn.disabled = true;
+    }
+
+    app.performGwanyokStep(step, (finishedStep) => {
+      if (gwanyokLadleBtn) {
+        gwanyokLadleBtn.disabled = false;
+      }
+      if (finishedStep < 3) {
+        gwanyokNextStep = finishedStep + 1;
+        // 다음 단계 관욕식 설명과 다음 바가지 번호 표시
+        enterBtn.innerHTML = `<span>💧</span> ${GWANYOK_WATER_MSGS[gwanyokNextStep - 1]}`;
+        if (gwanyokLadleBadge) {
+          gwanyokLadleBadge.textContent = String(gwanyokNextStep);
+          gwanyokLadleBadge.style.display = 'inline-flex';
+        }
+      } else {
+        gwanyokNextStep = 1;
+        gwanyokSessionStarted = false;
+        if (gwanyokLadleBadge) {
+          gwanyokLadleBadge.style.display = 'none';
+        }
+        if (gwanyokLadleBtn) {
+          gwanyokLadleBtn.style.display = 'none';
+        }
+        enterBtn.innerHTML = '<span>💧</span> 관욕식을 마쳤습니다.';
+        gwanyokResetTimer = setTimeout(() => {
+          if (app.activeLocation && app.activeLocation.id === 'gwanyok' && !app.isGwanyokActive) {
+            enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
+          }
+        }, 3000);
+      }
+    });
+  }
+
+  if (gwanyokLadleBtn) {
+    gwanyokLadleBtn.addEventListener('click', () => {
+      triggerGwanyokLadle();
+    });
+  }
+
+  window.onGwanyokLadleClick = () => {
+    if (!app.activeLocation || app.activeLocation.id !== 'gwanyok') return;
+    if (!gwanyokSessionStarted) {
+      gwanyokSessionStarted = true;
+      gwanyokNextStep = 1;
+      if (gwanyokLadleBtn) {
+        gwanyokLadleBtn.style.display = 'inline-flex';
+        gwanyokLadleBtn.disabled = false;
+      }
+      if (gwanyokLadleBadge) {
+        gwanyokLadleBadge.textContent = '1';
+        gwanyokLadleBadge.style.display = 'inline-flex';
+      }
+      enterBtn.innerHTML = `<span>💧</span> ${GWANYOK_WATER_MSGS[0]}`;
+    }
+    triggerGwanyokLadle();
   };
 
   // 4. 전각 입장 / 탑돌이 시작 / 범종 타종
@@ -608,39 +761,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (currentLoc.id === 'gwanyok') {
-      if (app.isGwanyokActive) return;
-      const waterSteps = [
-        { label: '첫번째 물', msg: '탐욕(貪)을 씻어냄 · 욕심과 집착을 비우고 마음을 맑힙니다.' },
-        { label: '두번째 물', msg: '성냄(瞋)을 씻어냄 · 화와 미움을 내려놓고 자비심을 키웁니다.' },
-        { label: '세번째 물', msg: '어리석음(癡)을 씻어냄 · 무지와 편견을 씻고 지혜의 눈을 뜹니다.' }
-      ];
-      enterBtn.innerHTML = `<span>💧</span> ${waterSteps[0].label}`;
-      if (gwanyokMeditationMsg) {
-        gwanyokMeditationMsg.textContent = waterSteps[0].msg;
-        gwanyokMeditationMsg.style.display = 'block';
-      }
-
-      app.performGwanyok(
-        (currentStep) => {
-          const stepInfo = waterSteps[currentStep - 1] || waterSteps[0];
-          enterBtn.innerHTML = `<span>💧</span> ${stepInfo.label}`;
-          if (gwanyokMeditationMsg) {
-            gwanyokMeditationMsg.textContent = stepInfo.msg;
-            gwanyokMeditationMsg.style.display = 'block';
-          }
-        },
-        () => {
-          enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
-          if (gwanyokMeditationMsg) {
-            gwanyokMeditationMsg.style.display = 'none';
-          }
+      if (!gwanyokSessionStarted) {
+        gwanyokSessionStarted = true;
+        gwanyokNextStep = 1;
+        if (gwanyokLadleBtn) {
+          gwanyokLadleBtn.style.display = 'inline-flex';
+          gwanyokLadleBtn.disabled = false;
         }
-      );
+        if (gwanyokLadleBadge) {
+          gwanyokLadleBadge.textContent = '1';
+          gwanyokLadleBadge.style.display = 'inline-flex';
+        }
+        enterBtn.innerHTML = `<span>💧</span> ${GWANYOK_WATER_MSGS[0]}`;
+      }
       return;
     }
 
     locationCard.classList.remove('visible');
     document.body.classList.add('in-meditation');
+    window.templeAudio?.stopSpeech();
 
     app.enterCurrentBuilding();
     if (openPrayerText && currentLoc.id !== 'jijang') {
@@ -655,14 +794,29 @@ document.addEventListener('DOMContentLoaded', () => {
     incenseBtn.classList.remove('active');
     incenseText.textContent = '향 피우기';
 
+    const setDrawerOpen = (open) => {
+      if (!meditationMenuBox) return;
+      meditationMenuBox.classList.toggle('drawer-open', open);
+      if (meditationMenuToggle) {
+        meditationMenuToggle.classList.toggle('active', open);
+      }
+      if (meditationMenuToggleText) {
+        meditationMenuToggleText.textContent = open ? '메뉴 접기' : '🙏 참배 · 수행하기';
+      }
+    };
+
     if (currentLoc.id === 'pagoda') {
       // [요청 반영] 탑돌이 시: 상단 중복 제목 숨기고 전용 탑돌이 카드만 1번 깔끔하게 표시!
+      if (meditationMenuToggle) meditationMenuToggle.style.display = 'none';
+      setDrawerOpen(true);
       templeHeaderGroup.style.display = 'none';
       pagodaCounterCard.classList.add('visible');
       breathContainer.style.display = 'none';
       startMeditationBtn.style.display = 'none';
       candleBtn.style.display = 'none';
       incenseBtn.style.display = 'none';
+      if (chantBtn) chantBtn.style.display = 'none';
+      if (chantStatusCard) chantStatusCard.style.display = 'none';
 
       // [요청 반영] 묘보탑 이동 시 3배 대신 '탑돌이' 표출 (시작 시 합장 반배 진행, 🙏 및 🪵 제거하여 타 전각과 통일)
       bowBtn.style.gridColumn = '1 / -1';
@@ -682,7 +836,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       };
     } else {
-      // 전각 내부 법당 모드
+      // 전각 내부 법당 모드: 평소에는 '참배 · 수행하기'와 '마당으로'만 단정히 표시
+      if (meditationMenuToggle) meditationMenuToggle.style.display = 'flex';
+      setDrawerOpen(false);
       templeHeaderGroup.style.display = 'block';
       pagodaCounterCard.classList.remove('visible');
       breathContainer.style.display = 'flex';
@@ -699,6 +855,46 @@ document.addEventListener('DOMContentLoaded', () => {
       breathContainer.style.display = 'none';
       startMeditationBtn.classList.remove('active');
       if (meditationBtnText) meditationBtnText.textContent = '호흡 명상';
+
+      const HALL_CHANT_LABELS = {
+        seokguram: '천수경'
+      };
+      const chantLabel = HALL_CHANT_LABELS[currentLoc.id];
+      if (chantBtn && chantText) {
+        if (chantLabel) {
+          chantBtn.style.display = 'flex';
+          chantBtn.classList.remove('active');
+          chantText.textContent = `${chantLabel} 듣기`;
+          if (chantStatusCard) chantStatusCard.style.display = 'none';
+          chantBtn.onclick = () => {
+            if (!window.templeAudio) return;
+            window.templeAudio.resume();
+            const isPlaying = window.templeAudio.toggleChant(
+              currentLoc.id,
+              (title) => {
+                chantBtn.classList.add('active');
+                chantText.textContent = `${title} 멈추기`;
+                if (chantStatusCard) chantStatusCard.style.display = 'none';
+              },
+              () => {
+                chantBtn.classList.remove('active');
+                chantText.textContent = `${chantLabel} 듣기`;
+                if (chantStatusCard) chantStatusCard.style.display = 'none';
+              }
+            );
+            if (!isPlaying) {
+              chantBtn.classList.remove('active');
+              chantText.textContent = `${chantLabel} 듣기`;
+              if (chantStatusCard) chantStatusCard.style.display = 'none';
+            } else {
+              setDrawerOpen(false);
+            }
+          };
+        } else {
+          chantBtn.style.display = 'none';
+          if (chantStatusCard) chantStatusCard.style.display = 'none';
+        }
+      }
 
       if (currentLoc.id === 'seokguram') {
         meditationTitle.textContent = '석굴암';
@@ -774,11 +970,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const closeMeditationDrawer = () => {
+    if (meditationMenuBox && meditationMenuToggle && meditationMenuToggle.style.display !== 'none') {
+      meditationMenuBox.classList.remove('drawer-open');
+      meditationMenuToggle.classList.remove('active');
+      if (meditationMenuToggleText) meditationMenuToggleText.textContent = '🙏 참배 · 수행하기';
+    }
+  };
+
+  if (meditationMenuToggle && meditationMenuBox) {
+    meditationMenuToggle.addEventListener('click', () => {
+      const nextOpen = !meditationMenuBox.classList.contains('drawer-open');
+      meditationMenuBox.classList.toggle('drawer-open', nextOpen);
+      meditationMenuToggle.classList.toggle('active', nextOpen);
+      if (meditationMenuToggleText) {
+        meditationMenuToggleText.textContent = nextOpen ? '메뉴 접기' : '🙏 참배 · 수행하기';
+      }
+    });
+  }
+
   // [요청 반영] '호흡 명상' 메뉴 버튼 토글 (불단을 가리지 않고 필요할 때만 켜고 끔)
   let isMeditationActive = false;
   startMeditationBtn.addEventListener('click', () => {
     isMeditationActive = !isMeditationActive;
     if (isMeditationActive) {
+      closeMeditationDrawer();
       startMeditationBtn.classList.add('active');
       if (meditationBtnText) meditationBtnText.textContent = '명상 멈추기';
       breathContainer.style.display = 'flex';
@@ -821,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (app.isBowing) return;
+    closeMeditationDrawer();
     bowBtn.classList.add('active');
     bowText.textContent = '삼배 올리는 중...';
     bowStatusCard.style.display = 'block';
@@ -890,7 +1107,11 @@ document.addEventListener('DOMContentLoaded', () => {
       window.templeAudio.stopMoktakLoop();
       window.templeAudio.stopYoryeongLoop();
       window.templeAudio.stopWindChimeLoop();
+      if (window.templeAudio.stopChant) window.templeAudio.stopChant();
     }
+    if (chantBtn) chantBtn.classList.remove('active');
+    if (chantStatusCard) chantStatusCard.style.display = 'none';
+    closeMeditationDrawer();
     instrumentBtn.classList.remove('active');
 
     document.body.classList.remove('in-meditation');
@@ -904,6 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. 발원문 / 지장전 소원 쓰고 등달기 팝업 모달
   openPrayerBtn.addEventListener('click', () => {
     if (!app.activeLocation) return;
+    closeMeditationDrawer();
     openPrayerEditModal(app.activeLocation, null);
   });
 
@@ -937,25 +1159,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 7. 사운드 토글
+  // 7. 사운드 토글 (오른쪽 하단 스피커 버튼 + 1회성 소리 안내 설명)
+  const soundGuideTip = document.getElementById('sound-guide-tip');
+  const dismissSoundGuide = () => {
+    if (soundGuideTip) {
+      soundGuideTip.style.display = 'none';
+    }
+    try {
+      localStorage.setItem('bomunsa_sound_guide_seen', '1');
+    } catch (e) {}
+  };
+  if (soundGuideTip) {
+    try {
+      if (localStorage.getItem('bomunsa_sound_guide_seen') === '1') {
+        soundGuideTip.style.display = 'none';
+      }
+    } catch (e) {}
+    soundGuideTip.addEventListener('click', dismissSoundGuide);
+  }
+
   muteBtn.addEventListener('click', () => {
+    dismissSoundGuide();
     if (!window.templeAudio) return;
     window.templeAudio.resume();
     window.templeAudio.startAmbient();
-    const isMuted = window.templeAudio.toggleMute();
-    muteBtn.textContent = isMuted ? '🔇' : '🔔';
-  });
-
-  // 8. 전체화면 토글
-  fullscreenBtn.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
+    const isTtsOn = window.templeAudio.toggleTts();
+    muteBtn.textContent = isTtsOn ? '🔊' : '🔇';
+    if (!isTtsOn) {
+      if (chantBtn) chantBtn.classList.remove('active');
+      if (chantStatusCard) chantStatusCard.style.display = 'none';
+    }
+    if (isTtsOn) {
+      if (app.activeLocation) {
+        speakLocation(app.activeLocation, true);
+      } else if (document.body.classList.contains('in-meditation') && meditationTitle?.textContent) {
+        window.templeAudio.speakDescription(meditationTitle.textContent);
+      }
     }
   });
 
-  // 9. 음원 출처 및 저작권 안내 모달
+  // 8. 음원 출처 및 저작권 안내 모달
   const creditBtn = document.getElementById('credit-btn');
   const creditModalOverlay = document.getElementById('credit-modal-overlay');
   const creditCloseBtn = document.getElementById('credit-close-btn');
@@ -976,10 +1219,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // [요청 반영] 도량에 들어서면(첫 화면 터치/클릭 시) 장엄한 대형 범종 소리가 도량에 울려 퍼짐
-  const firstTouchHandler = () => {
+  const firstTouchHandler = (e) => {
     if (window.templeAudio) {
       window.templeAudio.resume();
       window.templeAudio.startAmbient(); // 내부에서 첫 타종으로 playTempleBell() 자동 실행
+      const clickedMuteBtn = e && e.target && (e.target === muteBtn || muteBtn.contains(e.target));
+      if (!clickedMuteBtn && window.templeAudio.isTtsEnabled && app.activeLocation && lastSpokenLocId !== app.activeLocation.id) {
+        speakLocation(app.activeLocation);
+      }
     }
     window.removeEventListener('click', firstTouchHandler);
     window.removeEventListener('touchstart', firstTouchHandler);

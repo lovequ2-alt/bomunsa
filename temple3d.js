@@ -117,11 +117,20 @@ class Bomunsa3D {
     this.container.appendChild(this.renderer.domElement);
 
     this.setupLighting();
+    this.outdoorStoneLanterns = [];
+    this.applyTimeOfDayAtmosphere();
+    this.timeOfDayTimer = setInterval(() => {
+      if (this.currentMode === 'outside' || this.currentMode === 'inside_seokguram') {
+        this.applyTimeOfDayAtmosphere();
+      }
+    }, 60000);
     this.buildWorld();
+    this.applyTimeOfDayAtmosphere();
     this.createGasshoMonkCharacter();
     this.createInsideTempleProps();
     this.createRippleMarker();
     this.setupEvents();
+    this.checkInteractables();
     this.animate();
   }
 
@@ -144,12 +153,76 @@ class Bomunsa3D {
     this.hemiLight = new THREE.HemisphereLight(0xd9ecf7, 0x82705b, 0.75);
     this.scene.add(this.hemiLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
-    this.scene.add(ambientLight);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+    this.scene.add(this.ambientLight);
 
     this.insideCandleLight = new THREE.PointLight(0xff9933, 0, 20);
     this.insideCandleLight.position.set(0, -80 + 2.0, 0.5);
     this.scene.add(this.insideCandleLight);
+  }
+
+  getEffectiveHour() {
+    try {
+      const hourParam = new URLSearchParams(window.location.search).get('hour');
+      if (hourParam !== null && hourParam !== '') {
+        const parsed = Number(hourParam);
+        if (!Number.isNaN(parsed) && parsed >= 0 && parsed < 24) {
+          return Math.floor(parsed);
+        }
+      }
+    } catch (e) {}
+    return new Date().getHours();
+  }
+
+  applyTimeOfDayAtmosphere() {
+    if (!this.scene || !this.sunLight || !this.hemiLight) return;
+    const hour = this.getEffectiveHour();
+    // 17시(오후 5시) ~ 새벽 5시 전까지 살짝 어둑한 저녁/새벽 분위기 적용
+    const isEvening = hour >= 17 || hour < 5;
+
+    if (isEvening) {
+      if (this.scene.background) this.scene.background.setHex(0x46566e);
+      if (this.scene.fog) {
+        this.scene.fog.color.setHex(0x46566e);
+        this.scene.fog.density = 0.014;
+      }
+      this.sunLight.color.setHex(0xf0c294);
+      this.sunLight.intensity = 0.44;
+      this.hemiLight.color.setHex(0x6b82a3);
+      this.hemiLight.groundColor.setHex(0x3d3630);
+      this.hemiLight.intensity = 0.34;
+      if (this.ambientLight) this.ambientLight.intensity = 0.15;
+      if (this.renderer) this.renderer.toneMappingExposure = 0.86;
+    } else {
+      if (this.scene.background) this.scene.background.setHex(0xdcebf5);
+      if (this.scene.fog) {
+        this.scene.fog.color.setHex(0xdcebf5);
+        this.scene.fog.density = 0.012;
+      }
+      this.sunLight.color.setHex(0xfff3db);
+      this.sunLight.intensity = 1.25;
+      this.hemiLight.color.setHex(0xd9ecf7);
+      this.hemiLight.groundColor.setHex(0x82705b);
+      this.hemiLight.intensity = 0.75;
+      if (this.ambientLight) this.ambientLight.intensity = 0.25;
+      if (this.renderer) this.renderer.toneMappingExposure = 1.05;
+    }
+
+    if (this.outdoorStoneLanterns) {
+      this.outdoorStoneLanterns.forEach((l) => {
+        if (l.light) {
+          l.light.intensity = isEvening ? 1.35 : 0;
+          l.light.distance = isEvening ? 7.5 : 4;
+        }
+        if (l.coreMat) {
+          l.coreMat.emissiveIntensity = isEvening ? 1.6 : 0.05;
+          l.coreMat.opacity = isEvening ? 0.95 : 0.25;
+        }
+        if (l.glowSprite && l.glowSprite.material) {
+          l.glowSprite.material.opacity = isEvening ? 0.68 : 0;
+        }
+      });
+    }
   }
 
   // [사용자 요청 완벽 반영: 첨부 인형 사진처럼 동글동글 작고 귀여운 2등신 동자승 + 얼굴에는 동그란 코만 + 뒷모습엔 아무 표시 없이 매끈하게 구현]
@@ -1672,6 +1745,7 @@ class Bomunsa3D {
     dipperGroup.position.set(0.20, 0.38 + 0.38, 0.72);
     dipperGroup.rotation.z = -0.08;
     group.add(dipperGroup);
+    this.gwanyokAltarDipper = dipperGroup;
 
     // 5. [사용자 요청 완벽 반영: 바닥과 주변은 아기자기하고 풍성한 작은 꽃들로 구성]
     // 사진 '관욕식'처럼 분홍, 노랑, 하양, 연꽃잎(연청록)의 작은 꽃송이들과 잎사귀들이 테이블 위와 주변 바닥에 소복하게 장식됨
@@ -1747,7 +1821,7 @@ class Bomunsa3D {
     // 전각 인터랙터블 등록
     this.registerInteractable({
       id: 'gwanyok',
-      name: '아기 부처님 관욕식(灌浴式)',
+      name: '아기 부처님 관욕식',
       desc: '아기 부처님께 맑은 감로수를 부어 몸과 마음을 씻어내는 관욕예식을 하는 곳입니다.',
       position: new THREE.Vector3(x, 0, z + 1.55), // 관욕대 바로 앞
       lookTarget: new THREE.Vector3(x, 1.25, z),
@@ -2399,25 +2473,87 @@ class Bomunsa3D {
     });
   }
 
-  // [사용자 요청 완벽 반영: 석굴암은 기와지붕모양 전각 대신 첨부 사진 같은 대리석 기둥모양의 전각으로 기둥과 평지붕을 그리고, 어두운 부분은 진한 회색 처리]
+  createSeokguramPhotoTexture() {
+    const buddhaCanvas = document.createElement('canvas');
+    buddhaCanvas.width = 640;
+    buddhaCanvas.height = 720;
+    const bCtx = buddhaCanvas.getContext('2d');
+    const seokBuddhaTex = new THREE.CanvasTexture(buddhaCanvas);
+
+    const interiorImgSrc = window.SEOKGURAM_INTERIOR_DATA || window.SEOKGURAM_IMAGE_DATA;
+    if (interiorImgSrc) {
+      const img = new Image();
+      img.onload = () => {
+        bCtx.clearRect(0, 0, 640, 720);
+        bCtx.fillStyle = '#050608';
+        bCtx.fillRect(0, 0, 640, 720);
+        bCtx.drawImage(img, 0, 0, 640, 720);
+
+        // 중앙 본존불은 큼직하고 선명하게 살리고 바깥쪽으로 갈수록 자연스럽게 어두워지는 타원형 그라데이션
+        bCtx.save();
+        bCtx.translate(320, 365);
+        bCtx.scale(1.0, 1.12);
+        const vGrad = bCtx.createRadialGradient(0, 0, 140, 0, 0, 295);
+        vGrad.addColorStop(0.0, 'rgba(5, 6, 8, 0.0)');
+        vGrad.addColorStop(0.45, 'rgba(5, 6, 8, 0.28)');
+        vGrad.addColorStop(0.76, 'rgba(5, 6, 8, 0.78)');
+        vGrad.addColorStop(1.0, 'rgba(5, 6, 8, 1.0)');
+        bCtx.fillStyle = vGrad;
+        bCtx.fillRect(-360, -360, 720, 720);
+        bCtx.restore();
+
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = 640;
+        maskCanvas.height = 720;
+        const kCtx = maskCanvas.getContext('2d');
+        kCtx.save();
+        kCtx.translate(320, 365);
+        kCtx.scale(1.0, 1.12);
+        const mGrad = kCtx.createRadialGradient(0, 0, 155, 0, 0, 305);
+        mGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+        mGrad.addColorStop(0.55, 'rgba(255, 255, 255, 0.92)');
+        mGrad.addColorStop(0.82, 'rgba(255, 255, 255, 0.35)');
+        mGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+        kCtx.fillStyle = mGrad;
+        kCtx.fillRect(-360, -360, 720, 720);
+        kCtx.restore();
+
+        bCtx.globalCompositeOperation = 'destination-in';
+        bCtx.drawImage(maskCanvas, 0, 0);
+        bCtx.globalCompositeOperation = 'source-over';
+        seokBuddhaTex.needsUpdate = true;
+      };
+      img.src = interiorImgSrc;
+    }
+    return seokBuddhaTex;
+  }
+
+  // [석굴암 야외 전각: 다른 전각과 동일하게 또렷하고 선명한 화강암 질감·명암 대비 + 큼직한 본존불]
   createSeokguram(x, y, z) {
+    this.seokguramPos = new THREE.Vector3(x, y, z);
     const group = new THREE.Group();
 
-    // 1. 대리석 결(Marble) 캔버스 텍스처 생성
+    // 1. 흐린 회색 대리석 결 캔버스 텍스처 생성 (은은한 대리석 결과 부드러운 입자)
     const marbleCanvas = document.createElement('canvas');
     marbleCanvas.width = 512;
     marbleCanvas.height = 512;
     const mctx = marbleCanvas.getContext('2d');
-    mctx.fillStyle = '#eceee9';
+    mctx.fillStyle = '#dce0e5';
     mctx.fillRect(0, 0, 512, 512);
-    // 은은한 회백색 대리석 결과 블록 줄눈
-    for (let i = 0; i < 28; i++) {
-      mctx.strokeStyle = i % 2 === 0 ? 'rgba(165, 170, 176, 0.28)' : 'rgba(255, 255, 255, 0.45)';
-      mctx.lineWidth = 2 + (i % 3);
+    for (let i = 0; i < 4800; i++) {
+      const v = Math.random();
+      mctx.fillStyle = v > 0.62
+        ? 'rgba(255, 255, 255, 0.28)'
+        : (v > 0.28 ? 'rgba(165, 172, 180, 0.16)' : 'rgba(130, 138, 148, 0.14)');
+      mctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    }
+    for (let i = 0; i < 14; i++) {
+      mctx.strokeStyle = 'rgba(155, 162, 170, 0.18)';
+      mctx.lineWidth = 1.4;
       mctx.beginPath();
-      const sy = (i * 23) % 512;
+      const sy = (i * 36) % 512;
       mctx.moveTo(0, sy);
-      mctx.bezierCurveTo(160, sy + ((i % 5) - 2) * 18, 350, sy - ((i % 4) - 1.5) * 18, 512, sy + ((i % 3) - 1) * 14);
+      mctx.bezierCurveTo(170, sy + ((i % 2 === 0 ? 1 : -1) * 14), 340, sy - ((i % 2 === 0 ? 1 : -1) * 14), 512, sy);
       mctx.stroke();
     }
     const marbleTex = new THREE.CanvasTexture(marbleCanvas);
@@ -2426,28 +2562,30 @@ class Bomunsa3D {
 
     const whiteMarbleMat = new THREE.MeshStandardMaterial({
       map: marbleTex,
-      color: 0xf0f2ee,
-      roughness: 0.42,
-      metalness: 0.05
+      color: 0xe6eaee,
+      roughness: 0.56,
+      metalness: 0.04
     });
     const carvedMarbleMat = new THREE.MeshStandardMaterial({
       map: marbleTex,
-      color: 0xdcddda,
-      roughness: 0.52,
-      metalness: 0.05
+      color: 0xd0d5dc,
+      roughness: 0.64,
+      metalness: 0.04
     });
-    // [요청 반영: 어두운 부분은 진한 회색 처리 - 모바일에서도 시커멓게 뭉개지지 않도록 밝기 조정]
     const darkGreyWallMat = new THREE.MeshStandardMaterial({
-      color: 0x5c626b,
-      roughness: 0.82
+      map: marbleTex,
+      color: 0xaab2bc,
+      roughness: 0.72
     });
     const deepDarkGreyMat = new THREE.MeshStandardMaterial({
-      color: 0x454a52,
-      roughness: 0.86
+      color: 0x07090d,
+      roughness: 0.96,
+      side: THREE.DoubleSide
     });
     const midGreyStoneMat = new THREE.MeshStandardMaterial({
-      color: 0x6f7680,
-      roughness: 0.78
+      map: marbleTex,
+      color: 0xbcc3cc,
+      roughness: 0.68
     });
 
     const width = 10.6;
@@ -2455,229 +2593,250 @@ class Bomunsa3D {
     const baseH = 0.64;
     const pillarH = 3.65;
 
-    // 2. 하단 대리석 기단 및 사진 속 중앙 대리석 진입로(돌계단/경사로)
+    // 2. 하단 화강암 기단 & 중앙 화강암 보도 & 좌우 돌계단
     const basePlatform = new THREE.Mesh(new THREE.BoxGeometry(width + 0.8, baseH, depth + 0.6), carvedMarbleMat);
     basePlatform.position.set(0, baseH / 2, 0);
     basePlatform.receiveShadow = true;
     group.add(basePlatform);
 
-    // 기단 앞면 진한 회색 음영 단차
     const baseShadowStrip = new THREE.Mesh(new THREE.BoxGeometry(width + 0.84, 0.14, 0.12), darkGreyWallMat);
     baseShadowStrip.position.set(0, 0.10, (depth + 0.6) / 2 + 0.02);
     group.add(baseShadowStrip);
 
-    // 사진 하단 중앙의 밝은 대리석 진입 보도와 계단
-    const frontWalkway = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.12, 3.2), whiteMarbleMat);
-    frontWalkway.position.set(0, 0.06, depth / 2 + 1.6);
+    const frontWalkway = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 3.8), whiteMarbleMat);
+    frontWalkway.position.set(0, 0.04, depth / 2 + 1.9);
     frontWalkway.receiveShadow = true;
     group.add(frontWalkway);
 
-    const step1 = new THREE.Mesh(new THREE.BoxGeometry(2.65, 0.24, 0.85), whiteMarbleMat);
-    step1.position.set(0, 0.18, depth / 2 + 0.65);
-    group.add(step1);
+    // 좌·우 돌계단
+    [-2.55, 2.55].forEach((sx) => {
+      for (let st = 0; st < 4; st++) {
+        const stepH = 0.15;
+        const stepMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.55, stepH, 0.30),
+          st % 2 === 0 ? whiteMarbleMat : carvedMarbleMat
+        );
+        stepMesh.position.set(sx, 0.075 + st * stepH, depth / 2 + 0.85 - st * 0.24);
+        group.add(stepMesh);
+      }
+      [-0.82, 0.82].forEach((cx) => {
+        const cheek = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.36, 1.05), darkGreyWallMat);
+        cheek.position.set(sx + cx, 0.18, depth / 2 + 0.52);
+        group.add(cheek);
+      });
+    });
 
-    const step2 = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.42, 0.65), carvedMarbleMat);
-    step2.position.set(0, 0.32, depth / 2 + 0.35);
-    group.add(step2);
+    // 중앙 제단 & 앞쪽 화강암 향로석 (기도처와 통일)
+    const outdoorAltar = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.52, 0.72), whiteMarbleMat);
+    outdoorAltar.position.set(0, 0.26, depth / 2 + 0.42);
+    group.add(outdoorAltar);
 
-    // 3. [어두운 부분 진한 회색 처리]: 대리석 기둥 뒤쪽의 깊숙한 본체 벽면 및 그늘진 내부 영역
-    const mainDarkBody = new THREE.Mesh(
-      new THREE.BoxGeometry(width - 0.6, pillarH + 0.1, depth - 1.0),
-      darkGreyWallMat
-    );
-    mainDarkBody.position.set(0, baseH + pillarH / 2, -0.35);
-    mainDarkBody.castShadow = true;
-    mainDarkBody.receiveShadow = true;
-    group.add(mainDarkBody);
+    const outdoorAltarTop = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.07, 0.80), carvedMarbleMat);
+    outdoorAltarTop.position.set(0, 0.55, depth / 2 + 0.42);
+    group.add(outdoorAltarTop);
 
-    // 처마 밑과 기둥 뒤쪽 상단의 짙은 회색 음영부
+    const outdoorIncensePed = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.56, 0.44), whiteMarbleMat);
+    outdoorIncensePed.position.set(0, 0.28, depth / 2 + 1.02);
+    group.add(outdoorIncensePed);
+    const outdoorIncenseCap = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.08, 0.50), carvedMarbleMat);
+    outdoorIncenseCap.position.set(0, 0.58, depth / 2 + 1.02);
+    group.add(outdoorIncenseCap);
+
+    // 3. 본체 좌우측 벽면 및 처마 밑 그늘 (중앙 감실은 깊숙이 비워둠)
+    [-3.15, 3.15].forEach((wx) => {
+      const sideWall = new THREE.Mesh(
+        new THREE.BoxGeometry(3.8, pillarH + 0.1, depth - 1.0),
+        darkGreyWallMat
+      );
+      sideWall.position.set(wx, baseH + pillarH / 2, -0.35);
+      sideWall.castShadow = true;
+      sideWall.receiveShadow = true;
+      group.add(sideWall);
+    });
+
     const upperShadowBand = new THREE.Mesh(
-      new THREE.BoxGeometry(width + 0.2, 0.55, depth - 0.2),
-      deepDarkGreyMat
+      new THREE.BoxGeometry(width + 0.2, 0.52, depth - 0.2),
+      midGreyStoneMat
     );
     upperShadowBand.position.set(0, baseH + pillarH - 0.22, -0.05);
     group.add(upperShadowBand);
 
-    // 4. 첨부 사진 속 좌·우 아치형(둥근 상단) 대리석 창문틀 + 내부 진한 회색 창문 처리
-    [-2.85, 2.85].forEach((wx) => {
+    // 4. 좌·우 아치형 출입문 (사진 속 양옆 출입문)
+    [-2.70, 2.70].forEach((wx) => {
       const winGroup = new THREE.Group();
-      winGroup.position.set(wx, baseH + 1.75, (depth - 1.0) / 2 - 0.33);
+      winGroup.position.set(wx, baseH + 1.65, (depth - 1.0) / 2 - 0.30);
 
-      // 대리석 사각 하부 창틀
-      const outerRect = new THREE.Mesh(new THREE.BoxGeometry(1.42, 1.55, 0.14), carvedMarbleMat);
-      outerRect.position.y = -0.15;
+      const outerRect = new THREE.Mesh(new THREE.BoxGeometry(1.36, 1.80, 0.14), carvedMarbleMat);
+      outerRect.position.y = -0.35;
       winGroup.add(outerRect);
 
-      // 대리석 반원 아치 상부 창틀
-      const outerArch = new THREE.Mesh(new THREE.CylinderGeometry(0.71, 0.71, 0.14, 24), carvedMarbleMat);
+      const outerArch = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.14, 24), carvedMarbleMat);
       outerArch.rotation.x = Math.PI / 2;
-      outerArch.position.y = 0.62;
+      outerArch.position.y = 0.55;
       winGroup.add(outerArch);
 
-      // 창문 안쪽 어두운 진한 회색 면
-      const innerDarkRect = new THREE.Mesh(new THREE.BoxGeometry(1.06, 1.38, 0.16), deepDarkGreyMat);
-      innerDarkRect.position.y = -0.15;
+      const innerDarkRect = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.62, 0.16), deepDarkGreyMat);
+      innerDarkRect.position.y = -0.35;
       winGroup.add(innerDarkRect);
 
-      const innerDarkArch = new THREE.Mesh(new THREE.CylinderGeometry(0.53, 0.53, 0.16, 20), deepDarkGreyMat);
+      const innerDarkArch = new THREE.Mesh(new THREE.CylinderGeometry(0.51, 0.51, 0.16, 20), deepDarkGreyMat);
       innerDarkArch.rotation.x = Math.PI / 2;
-      innerDarkArch.position.y = 0.54;
+      innerDarkArch.position.y = 0.46;
       winGroup.add(innerDarkArch);
 
-      // 사진 속 창문 가로/세로 대리석 창살(중간 가로 바)
-      const hBar = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.11, 0.18), carvedMarbleMat);
-      hBar.position.y = 0.22;
+      const silverFrame = new THREE.MeshStandardMaterial({ color: 0x9aa2aa, roughness: 0.4, metalness: 0.45 });
+      const hBar = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.06, 0.18), silverFrame);
+      hBar.position.y = 0.42;
       winGroup.add(hBar);
 
-      const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.35, 0.17), midGreyStoneMat);
-      vBar.position.y = -0.15;
+      const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.62, 0.17), silverFrame);
+      vBar.position.y = -0.35;
       winGroup.add(vBar);
-
-      // 창문 하단 대리석 창대석
-      const sill = new THREE.Mesh(new THREE.BoxGeometry(1.58, 0.16, 0.22), whiteMarbleMat);
-      sill.position.y = -0.92;
-      winGroup.add(sill);
 
       group.add(winGroup);
     });
 
-    // 5. 중앙 석굴 감실 입구 (진한 회색 석굴 배경 + 대리석 문틀 + 내부 화강석 본존불 실루엣)
+    // 5. 중앙 아치 석굴 감실 & 안쪽 깊숙히 배치된 새 석굴암 부처님 사진
     const centerPortal = new THREE.Group();
     centerPortal.position.set(0, baseH, (depth - 1.0) / 2 - 0.32);
 
-    // 중앙 입구 진한 회색 오목 벽면
-    const portalRecess = new THREE.Mesh(new THREE.BoxGeometry(2.35, 3.10, 0.18), deepDarkGreyMat);
-    portalRecess.position.set(0, 1.55, -0.02);
-    centerPortal.add(portalRecess);
+    // 깊숙한 석굴 암실 터널 (좌·우·상단·뒷벽 어두운 석재)
+    const grottoBack = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.2, 0.2), deepDarkGreyMat);
+    grottoBack.position.set(0, 1.6, -2.4);
+    centerPortal.add(grottoBack);
 
-    // 중앙 입구 대리석 테두리 기둥과 상인방
+    const grottoTop = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.2, 2.5), deepDarkGreyMat);
+    grottoTop.position.set(0, 3.15, -1.2);
+    centerPortal.add(grottoTop);
+
+    [-1.30, 1.30].forEach((gx) => {
+      const grottoSide = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.2, 2.5), deepDarkGreyMat);
+      grottoSide.position.set(gx, 1.6, -1.2);
+      centerPortal.add(grottoSide);
+    });
+
+    // 아치 테두리 몰딩 & 좌우 기둥
     [-1.12, 1.12].forEach((px) => {
-      const jamb = new THREE.Mesh(new THREE.BoxGeometry(0.20, 3.15, 0.24), carvedMarbleMat);
-      jamb.position.set(px, 1.575, 0.02);
+      const jamb = new THREE.Mesh(new THREE.BoxGeometry(0.24, 2.35, 0.30), carvedMarbleMat);
+      jamb.position.set(px, 1.18, 0.04);
       centerPortal.add(jamb);
     });
-    const portalLintel = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.24, 0.26), whiteMarbleMat);
-    portalLintel.position.set(0, 3.12, 0.03);
-    centerPortal.add(portalLintel);
-
-    // 중앙 입구 하단 대리석 불단/기단턱
-    const portalLowStep = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.46, 0.32), carvedMarbleMat);
-    portalLowStep.position.set(0, 0.23, 0.06);
-    centerPortal.add(portalLowStep);
-
-    // 입구 안쪽 어두운 진회색 배경 너머로 보이는 미니멀 회색 본존불과 방사형 광배 (외부 정면 표시)
-    const halo2D = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.15, 2.15),
-      new THREE.MeshBasicMaterial({ map: this.createSoftAureoleTexture(), transparent: true, opacity: 0.90, depthWrite: false })
+    const archRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.12, 0.15, 12, 24, Math.PI),
+      whiteMarbleMat
     );
-    halo2D.position.set(0, 1.85, 0.082);
-    centerPortal.add(halo2D);
+    archRing.position.set(0, 2.35, 0.05);
+    centerPortal.add(archRing);
 
-    const buddha2D = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.30, 1.92),
-      new THREE.MeshBasicMaterial({ map: this.createFlatBuddhaTexture(), transparent: true, opacity: 0.96, depthWrite: false })
+    // 석굴 안쪽 깊숙히 배치된 새 석굴암 본존불 사진
+    const outdoorBuddhaPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.10, 2.36),
+      new THREE.MeshBasicMaterial({
+        map: this.createSeokguramPhotoTexture(),
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
     );
-    buddha2D.position.set(0, 1.50, 0.088);
-    centerPortal.add(buddha2D);
+    outdoorBuddhaPlane.position.set(0, 1.50, -1.35);
+    centerPortal.add(outdoorBuddhaPlane);
 
     group.add(centerPortal);
 
-    // 6. [첨부 사진 핵심 요소: 웅장한 백색 대리석 기둥 (전면 중앙 2개 돌출 대리석 기둥 + 좌우 외곽 대리석 기둥)]
-    const addMarbleColumn = (cx, cz, radius = 0.28, isFrontMain = true) => {
+    // 6. 백색 화강암 기둥 (전면 중앙 원형 기둥 2 + 좌우 외곽 사각 기둥)
+    const addMarbleColumn = (cx, cz, radius = 0.27, isRound = true) => {
       const colGroup = new THREE.Group();
       colGroup.position.set(cx, baseH, cz);
 
-      // 하단 사각/팔각 대리석 주초 및 연화문 받침
-      const plinthBox = new THREE.Mesh(new THREE.BoxGeometry(radius * 2.5, 0.22, radius * 2.5), carvedMarbleMat);
-      plinthBox.position.y = 0.11;
+      const plinthBox = new THREE.Mesh(new THREE.BoxGeometry(radius * 2.4, 0.20, radius * 2.4), carvedMarbleMat);
+      plinthBox.position.y = 0.10;
       colGroup.add(plinthBox);
 
-      const lotusBase = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.15, radius * 1.32, 0.24, 16), whiteMarbleMat);
-      lotusBase.position.y = 0.34;
-      colGroup.add(lotusBase);
-
-      // 대리석 원기둥 몸체 (세로 플루팅/음각 느낌을 위해 20각 세그먼트 적용)
-      const shaft = new THREE.Mesh(
-        new THREE.CylinderGeometry(radius * 0.94, radius, pillarH - 0.68, 20),
-        whiteMarbleMat
-      );
-      shaft.position.y = 0.46 + (pillarH - 0.68) / 2;
-      shaft.castShadow = true;
-      shaft.receiveShadow = true;
-      colGroup.add(shaft);
-
-      // 상단 대리석 연화 주두(Capital) 및 사각 받침(Abacus)
-      const capitalNeck = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.18, radius * 0.96, 0.20, 16), carvedMarbleMat);
-      capitalNeck.position.y = pillarH - 0.22;
-      colGroup.add(capitalNeck);
-
-      const abacus = new THREE.Mesh(new THREE.BoxGeometry(radius * 2.4, 0.16, radius * 2.4), whiteMarbleMat);
-      abacus.position.y = pillarH - 0.06;
-      colGroup.add(abacus);
-
-      if (isFrontMain) {
-        // 전면 돌출 대리석 기둥과 본체 벽을 잇는 상단 대리석 보(아키트레이브)
-        const tieBeam = new THREE.Mesh(new THREE.BoxGeometry(radius * 1.7, 0.32, 1.15), carvedMarbleMat);
-        tieBeam.position.set(0, pillarH - 0.16, -0.55);
-        colGroup.add(tieBeam);
+      if (isRound) {
+        const shaft = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius * 0.94, radius, pillarH - 0.36, 20),
+          whiteMarbleMat
+        );
+        shaft.position.y = 0.20 + (pillarH - 0.36) / 2;
+        shaft.castShadow = true;
+        shaft.receiveShadow = true;
+        colGroup.add(shaft);
+      } else {
+        const shaft = new THREE.Mesh(
+          new THREE.BoxGeometry(radius * 1.75, pillarH - 0.36, radius * 1.75),
+          whiteMarbleMat
+        );
+        shaft.position.y = 0.20 + (pillarH - 0.36) / 2;
+        shaft.castShadow = true;
+        shaft.receiveShadow = true;
+        colGroup.add(shaft);
       }
+
+      const abacus = new THREE.Mesh(new THREE.BoxGeometry(radius * 2.35, 0.16, radius * 2.35), carvedMarbleMat);
+      abacus.position.y = pillarH - 0.08;
+      colGroup.add(abacus);
 
       group.add(colGroup);
     };
 
-    // 사진 정면 중앙에 나란히 서 있는 두 개의 굵은 백색 대리석 기둥
-    addMarbleColumn(-1.32, depth / 2 - 0.05, 0.29, true);
-    addMarbleColumn(1.32, depth / 2 - 0.05, 0.29, true);
+    addMarbleColumn(-1.42, depth / 2 - 0.05, 0.27, true);
+    addMarbleColumn(1.42, depth / 2 - 0.05, 0.27, true);
+    addMarbleColumn(-4.55, depth / 2 - 0.25, 0.25, false);
+    addMarbleColumn(4.55, depth / 2 - 0.25, 0.25, false);
+    addMarbleColumn(-4.55, -depth / 2 + 0.35, 0.25, false);
+    addMarbleColumn(4.55, -depth / 2 + 0.35, 0.25, false);
 
-    // 좌·우 양 끝을 받치는 외곽 대리석 기둥 및 후면 기둥
-    addMarbleColumn(-4.65, depth / 2 - 0.28, 0.26, false);
-    addMarbleColumn(4.65, depth / 2 - 0.28, 0.26, false);
-    addMarbleColumn(-4.65, -depth / 2 + 0.35, 0.25, false);
-    addMarbleColumn(4.65, -depth / 2 + 0.35, 0.25, false);
-
-    // 7. [첨부 사진 핵심 요소: 기와지붕 대신 두툼하고 수평적인 백색 대리석 지붕(엔타블러처/평지붕 처마)]
+    // 7. 수평 화강암 지붕(엔타블러처) + 처마 밑 붉은 연등 행렬
     const roofBaseY = baseH + pillarH;
 
-    // 처마 밑 진한 회색 음영 판 (사진 속 지붕 바로 아래 짙은 회색 그림자 라인)
     const roofSoffitShadow = new THREE.Mesh(
       new THREE.BoxGeometry(width + 1.0, 0.16, depth + 0.9),
-      deepDarkGreyMat
+      darkGreyWallMat
     );
     roofSoffitShadow.position.set(0, roofBaseY + 0.05, 0.12);
     group.add(roofSoffitShadow);
 
-    // 주 대리석 지붕 슬래브 (수평으로 뻗은 웅장한 백색 대리석 지붕)
     const mainMarbleRoof = new THREE.Mesh(
-      new THREE.BoxGeometry(width + 1.35, 0.56, depth + 1.25),
+      new THREE.BoxGeometry(width + 1.35, 0.54, depth + 1.25),
       whiteMarbleMat
     );
-    mainMarbleRoof.position.set(0, roofBaseY + 0.40, 0.15);
+    mainMarbleRoof.position.set(0, roofBaseY + 0.38, 0.15);
     mainMarbleRoof.castShadow = true;
     mainMarbleRoof.receiveShadow = true;
     group.add(mainMarbleRoof);
 
-    // 대리석 지붕 전면 양각 부조 장식 (사진 속 대리석 지붕 앞면의 연꽃/문양 조각 블록들)
-    for (let bx = -4.8; bx <= 4.81; bx += 1.2) {
-      const reliefBlock = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.34, 0.08), carvedMarbleMat);
-      reliefBlock.position.set(bx, roofBaseY + 0.40, (depth + 1.25) / 2 + 0.17);
-      group.add(reliefBlock);
-
-      const lotusBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.10, 12), whiteMarbleMat);
-      lotusBoss.rotation.x = Math.PI / 2;
-      lotusBoss.position.set(bx, roofBaseY + 0.40, (depth + 1.25) / 2 + 0.20);
-      group.add(lotusBoss);
-    }
-
-    // 대리석 지붕 상단 코니스(처마 끝단 턱) 및 상부 석굴 난간대
     const upperMarbleCornice = new THREE.Mesh(
-      new THREE.BoxGeometry(width + 1.55, 0.18, depth + 1.45),
+      new THREE.BoxGeometry(width + 1.55, 0.16, depth + 1.45),
       carvedMarbleMat
     );
-    upperMarbleCornice.position.set(0, roofBaseY + 0.76, 0.15);
+    upperMarbleCornice.position.set(0, roofBaseY + 0.72, 0.15);
     group.add(upperMarbleCornice);
 
-    // 8. 사진 속 대리석 지붕 위를 장식하는 수국 꽃나무 화단 & 뒤편 진회색 석굴 암반
-    const grottoDomeMat = new THREE.MeshStandardMaterial({ color: 0x4b5058, roughness: 0.90, flatShading: true });
+    // 처마 밑 붉은 연등 줄 (안쪽 기도처와 동일한 모습)
+    const redLanternMat = new THREE.MeshStandardMaterial({
+      color: 0xc92a35,
+      roughness: 0.48,
+      emissive: 0x3b070c,
+      emissiveIntensity: 0.28
+    });
+    const lanternTrimMat = new THREE.MeshStandardMaterial({ color: 0xf0c954, roughness: 0.45 });
+    const redLanternGeo = new THREE.SphereGeometry(0.14, 10, 8);
+    redLanternGeo.scale(1.05, 0.78, 1.05);
+    [
+      -3.85, -3.40, -2.95, -2.50, -2.05,
+      -0.96, -0.48, 0.0, 0.48, 0.96,
+      2.05, 2.50, 2.95, 3.40, 3.85
+    ].forEach((lx) => {
+      const rl = new THREE.Mesh(redLanternGeo, redLanternMat);
+      rl.position.set(lx, roofBaseY - 0.14, depth / 2 + 0.06);
+      group.add(rl);
+      const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.030, 0.09, 6), lanternTrimMat);
+      tassel.position.set(lx, roofBaseY - 0.28, depth / 2 + 0.06);
+      group.add(tassel);
+    });
+
+    // 8. 지붕 위 수풀·암반 & 좌우 조경수·대리석 석등
+    const grottoDomeMat = new THREE.MeshStandardMaterial({ color: 0x4a463f, roughness: 0.92, flatShading: true });
     [
       [-5.5, 2.5, -1.5, 2.5],
       [5.5, 2.5, -1.5, 2.5],
@@ -2692,36 +2851,26 @@ class Bomunsa3D {
       group.add(boulder);
     });
 
-    // 사진 속 대리석 평지붕 위와 양옆의 수국 꽃송이(분홍·하양·연보라)와 초록 잎사귀
-    const foliageGreenMat = new THREE.MeshStandardMaterial({ color: 0x3b5936, roughness: 0.85 });
-    const lightShrubMat = new THREE.MeshStandardMaterial({ color: 0x627c4e, roughness: 0.85 });
-    const blossomColors = [0xe8a3b8, 0xf4f2ed, 0xd98ca6, 0xeae5d9];
+    const foliageGreenMat = new THREE.MeshStandardMaterial({ color: 0x3d5432, roughness: 0.88, flatShading: true });
+    const lightShrubMat = new THREE.MeshStandardMaterial({ color: 0x62563c, roughness: 0.90, flatShading: true });
+    for (let fx = -4.5; fx <= 4.51; fx += 0.78) {
+      const topStone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 0), grottoDomeMat);
+      topStone.position.set(fx, roofBaseY + 0.88, depth / 2 + 0.15);
+      topStone.scale.set(1.2, 0.75, 0.9);
+      group.add(topStone);
 
-    for (let fx = -4.2; fx <= 4.21; fx += 0.85) {
-      const leafBush = new THREE.Mesh(new THREE.SphereGeometry(0.46, 10, 10), foliageGreenMat);
-      leafBush.scale.set(1.2, 0.75, 0.9);
-      leafBush.position.set(fx, roofBaseY + 1.05, depth / 2 - 0.15);
+      const leafBush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45, 1), Math.abs(Math.round(fx)) % 2 === 0 ? foliageGreenMat : lightShrubMat);
+      leafBush.scale.set(1.2, 0.82, 0.95);
+      leafBush.position.set(fx + 0.1, roofBaseY + 1.10, depth / 2 - 0.15);
       group.add(leafBush);
-
-      const blossomMat = new THREE.MeshStandardMaterial({
-        color: blossomColors[Math.abs(Math.round(fx * 3)) % blossomColors.length],
-        roughness: 0.7
-      });
-      const flowerCluster = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 10), blossomMat);
-      flowerCluster.scale.set(1.15, 0.85, 1.0);
-      flowerCluster.position.set(fx + 0.1, roofBaseY + 1.25, depth / 2 + 0.05);
-      group.add(flowerCluster);
     }
 
-    // 사진 좌·우 기둥 앞쪽의 둥근 정원수와 백색 대리석 석등 한 쌍
     [-4.1, 4.1].forEach((sx) => {
-      // 둥근 조경수
-      const sideBush = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 12), lightShrubMat);
+      const sideBush = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 12), foliageGreenMat);
       sideBush.scale.set(1.1, 0.95, 1.0);
       sideBush.position.set(sx, baseH + 1.65, depth / 2 + 0.55);
       group.add(sideBush);
 
-      // 사진 속 좌·우 백색 대리석 석등
       const lanternG = new THREE.Group();
       lanternG.position.set(sx * 0.92, 0, depth / 2 + 1.45);
       const lBase = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.52, 0.35, 8), whiteMarbleMat);
@@ -2733,6 +2882,29 @@ class Bomunsa3D {
       const lBox = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.38, 0.46), whiteMarbleMat);
       lBox.position.y = 1.15;
       lanternG.add(lBox);
+      const lCoreMat = new THREE.MeshStandardMaterial({
+        color: 0xffd27d,
+        emissive: 0xff9f2e,
+        emissiveIntensity: 0.05,
+        transparent: true,
+        opacity: 0.25
+      });
+      const lCore = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.22, 0.50), lCoreMat);
+      lCore.position.y = 1.15;
+      lanternG.add(lCore);
+      const lHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: this.createSoftAureoleTexture(),
+        color: 0xffb84d,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false
+      }));
+      lHalo.position.set(0, 1.15, 0);
+      lHalo.scale.set(1.6, 1.6, 1.6);
+      lanternG.add(lHalo);
+      if (this.outdoorStoneLanterns) {
+        this.outdoorStoneLanterns.push({ coreMat: lCoreMat, glowSprite: lHalo });
+      }
       const lRoof = new THREE.Mesh(new THREE.ConeGeometry(0.68, 0.38, 8), whiteMarbleMat);
       lRoof.position.y = 1.52;
       lanternG.add(lRoof);
@@ -2754,7 +2926,7 @@ class Bomunsa3D {
     this.registerInteractable({
       id: 'seokguram',
       name: '석굴암 (석굴법당)',
-      desc: '경주 토함산 석굴암을 모본으로 조성된 상징적인 석굴 법당입니다. 백색 대리석 기둥 너머로 화강석 본존불이 모셔져 있으며, 안으로 들어가 싱잉볼 명상을 할 수 있습니다.',
+      desc: '경주 토함산 석굴암을 모본으로 조성된 상징적인 석굴 법당입니다. 화강암 기둥 너머 깊은 감실 안쪽에 석굴암 본존불이 모셔져 있으며, 석굴암 앞에서 부처님께 기도하고 싱잉볼 명상을 할 수 있습니다.',
       position: new THREE.Vector3(x, 0, z + 7.5),
       lookTarget: new THREE.Vector3(x, 2.3, z),
       enterable: true,
@@ -3243,8 +3415,9 @@ class Bomunsa3D {
       metalness: 0.15
     });
     const floor = new THREE.Mesh(new THREE.CylinderGeometry(12.5, 12.5, 0.35, 36), floorMat);
-    floor.position.y = 0.17;
+    floor.position.y = -0.17;
     this.insideGroup.add(floor);
+    this.insideFloorMesh = floor;
 
     // 2. [우주적 심연] 허공에 고요히 부유하는 황금빛 성스러운 먼지 입자 (Cosmic Golden Dust)
     const dustCount = 180;
@@ -3273,69 +3446,123 @@ class Bomunsa3D {
     this.insideGroup.add(this.cosmicDust);
 
     // ==========================================
-    // [법당 1] 석굴암 (Seokguram) 서브그룹
-    // [사용자 요청 완벽 반영]
-    // 1. 부처님은 원경에 멀리 아늑하게 배치 (z = -9.8)
-    // 2. 사진 3 실루엣: 주두형(배모양) 방사형 황금 거신 광배 & 단아한 회색 미니멀 본존불
-    // 3. 촛대와 향로는 부처님 바로 앞 제단에 배치 (z = -8.0)
-    // 4. 나머지 공간은 깊고 고요한 어둠으로 여백 처리
+    // [법당 1] 석굴암 (Seokguram) 야외 화강암 노상 공간 & 깊숙한 석굴 본존불
+    // 1. 첨부 사진 기반의 화강암 바닥·보도·돌계단·석등·대리석 기둥·수평 석굴암 지붕 및 붉은 연등 줄 구현
+    // 2. 하늘 배경(낮/17시 이후 자동 전환) 아래 개방된 노상 기도 공간 구성
+    // 3. 중앙 석굴 감실 안쪽 깊숙히(z = -12.3) 본존불 사진 배치
     // ==========================================
     this.seokguramGroup = new THREE.Group();
 
-    // (1) 부처님 뒤편의 넓고 깊은 다크 화강암 제단 바닥 원반 및 동굴 아치 실루엣
-    const altarFloorCircle = new THREE.Mesh(
-      new THREE.CylinderGeometry(8.2, 8.6, 0.05, 36),
-      new THREE.MeshStandardMaterial({ color: 0x030407, roughness: 0.96 })
-    );
-    altarFloorCircle.position.set(0, 0.02, -10.8);
-    this.seokguramGroup.add(altarFloorCircle);
-
-    // (2) [석굴암 전실 아치 & 돌기둥 너머 본존불 - 주변을 점점 어둡게 비네팅 처리하여 깊은 굴 속 분위기 연출]
-    const stoneBuddhaGroup = new THREE.Group();
-
-    const buddhaCanvas = document.createElement('canvas');
-    buddhaCanvas.width = 768;
-    buddhaCanvas.height = 628;
-    const bCtx = buddhaCanvas.getContext('2d');
-    const seokBuddhaTex = new THREE.CanvasTexture(buddhaCanvas);
-
-    const interiorImgSrc = window.SEOKGURAM_INTERIOR_DATA || window.SEOKGURAM_IMAGE_DATA;
-    if (interiorImgSrc) {
-      const img = new Image();
-      img.onload = () => {
-        bCtx.clearRect(0, 0, 768, 628);
-        bCtx.drawImage(img, 0, 0, 768, 628);
-
-        // 우측 하단 '1/89' 표시 영역을 자연스럽게 가리고, 중앙 본존불과 아치에서 외곽으로 갈수록 점점 어두워지는 방사형 어둠 비네팅
-        const vGrad = bCtx.createRadialGradient(402, 300, 120, 402, 300, 405);
-        vGrad.addColorStop(0.0, 'rgba(2, 3, 5, 0.0)');
-        vGrad.addColorStop(0.45, 'rgba(2, 3, 5, 0.16)');
-        vGrad.addColorStop(0.72, 'rgba(2, 3, 5, 0.62)');
-        vGrad.addColorStop(0.90, 'rgba(2, 3, 5, 0.94)');
-        vGrad.addColorStop(1.0, 'rgba(2, 3, 5, 1.0)');
-        bCtx.fillStyle = vGrad;
-        bCtx.fillRect(0, 0, 768, 628);
-
-        // 외곽 가장자리를 배경 어둠(#020305)과 완전히 스며들도록 투명 페이드 마스크 적용
-        const maskCanvas = document.createElement('canvas');
-        maskCanvas.width = 768;
-        maskCanvas.height = 628;
-        const kCtx = maskCanvas.getContext('2d');
-        const mGrad = kCtx.createRadialGradient(402, 300, 145, 402, 300, 415);
-        mGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-        mGrad.addColorStop(0.62, 'rgba(255, 255, 255, 0.90)');
-        mGrad.addColorStop(0.84, 'rgba(255, 255, 255, 0.35)');
-        mGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
-        kCtx.fillStyle = mGrad;
-        kCtx.fillRect(0, 0, 768, 628);
-
-        bCtx.globalCompositeOperation = 'destination-in';
-        bCtx.drawImage(maskCanvas, 0, 0);
-        bCtx.globalCompositeOperation = 'source-over';
-        seokBuddhaTex.needsUpdate = true;
-      };
-      img.src = interiorImgSrc;
+    // 절차적 화강암 텍스처 생성 (밝은 회백색 화강암 + 자연스러운 석재 입자 & 줄눈)
+    const graniteCanvas = document.createElement('canvas');
+    graniteCanvas.width = 512;
+    graniteCanvas.height = 512;
+    const gCtx = graniteCanvas.getContext('2d');
+    gCtx.fillStyle = '#c5c9ce';
+    gCtx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 6500; i++) {
+      const gx = Math.random() * 512;
+      const gy = Math.random() * 512;
+      const v = Math.random();
+      gCtx.fillStyle = v > 0.68
+        ? 'rgba(255, 255, 255, 0.24)'
+        : (v > 0.32 ? 'rgba(130, 136, 142, 0.22)' : 'rgba(65, 70, 76, 0.20)');
+      gCtx.fillRect(gx, gy, 1.5 + Math.random() * 2, 1.5 + Math.random() * 2);
     }
+    gCtx.strokeStyle = 'rgba(72, 76, 82, 0.22)';
+    gCtx.lineWidth = 2;
+    for (let yLine = 64; yLine < 512; yLine += 64) {
+      gCtx.beginPath();
+      gCtx.moveTo(0, yLine);
+      gCtx.lineTo(512, yLine);
+      gCtx.stroke();
+    }
+    for (let xLine = 64; xLine < 512; xLine += 128) {
+      gCtx.beginPath();
+      gCtx.moveTo(xLine, 0);
+      gCtx.lineTo(xLine, 512);
+      gCtx.stroke();
+    }
+    const graniteTex = new THREE.CanvasTexture(graniteCanvas);
+    graniteTex.wrapS = THREE.RepeatWrapping;
+    graniteTex.wrapT = THREE.RepeatWrapping;
+    graniteTex.repeat.set(4, 4);
+
+    const graniteWalkTex = graniteTex.clone();
+    graniteWalkTex.needsUpdate = true;
+    graniteWalkTex.repeat.set(1.5, 4);
+
+    // 화강암 상판 이끼/물때 느낌이 은은히 배어있는 수평 보 텍스처
+    const lintelCanvas = document.createElement('canvas');
+    lintelCanvas.width = 512;
+    lintelCanvas.height = 128;
+    const liCtx = lintelCanvas.getContext('2d');
+    liCtx.fillStyle = '#bcc1c7';
+    liCtx.fillRect(0, 0, 512, 128);
+    for (let i = 0; i < 1800; i++) {
+      liCtx.fillStyle = Math.random() > 0.5 ? 'rgba(245,248,250,0.18)' : 'rgba(70,74,80,0.18)';
+      liCtx.fillRect(Math.random() * 512, Math.random() * 128, 2, 2);
+    }
+    for (let s = 0; s < 22; s++) {
+      const sx = 20 + Math.random() * 472;
+      const w = 4 + Math.random() * 12;
+      const h = 30 + Math.random() * 82;
+      const grad = liCtx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(138, 102, 56, 0.34)');
+      grad.addColorStop(1, 'rgba(138, 102, 56, 0.0)');
+      liCtx.fillStyle = grad;
+      liCtx.fillRect(sx, 0, w, h);
+    }
+    const lintelTex = new THREE.CanvasTexture(lintelCanvas);
+
+    const graniteLightMat = new THREE.MeshStandardMaterial({ map: graniteTex, color: 0xd6dade, roughness: 0.80, metalness: 0.04 });
+    const graniteMidMat = new THREE.MeshStandardMaterial({ map: graniteWalkTex, color: 0xb5bac0, roughness: 0.84, metalness: 0.04 });
+    const graniteColumnMat = new THREE.MeshStandardMaterial({ color: 0xd3d8dd, roughness: 0.68, metalness: 0.05 });
+    const graniteLintelMat = new THREE.MeshStandardMaterial({ map: lintelTex, color: 0xc9ced4, roughness: 0.80 });
+    const graniteDarkMat = new THREE.MeshStandardMaterial({ color: 0x5c626b, roughness: 0.88 });
+    const grottoRockMat = new THREE.MeshStandardMaterial({ color: 0x625d56, roughness: 0.92, flatShading: true });
+    const caveDeepMat = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 1.0, side: THREE.DoubleSide });
+
+    // (1) 넓은 야외 화강암 노상 마당 (좌·우 돌출부 없이 여러 참배객이 방석 위에 나란히 앉을 수 있는 평탄한 돌 바닥)
+    const courtyardBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(24, 24, 0.28, 40),
+      graniteMidMat
+    );
+    courtyardBase.position.set(0, -0.145, -4.5);
+    courtyardBase.receiveShadow = true;
+    this.seokguramGroup.add(courtyardBase);
+
+    // (2) 상단 화강암 월대(기단)
+    const upperTerrace = new THREE.Mesh(new THREE.BoxGeometry(10.6, 0.56, 3.6), graniteMidMat);
+    upperTerrace.position.set(0, 0.27, -9.6);
+    this.seokguramGroup.add(upperTerrace);
+
+    const terraceTrim = new THREE.Mesh(new THREE.BoxGeometry(10.8, 0.09, 0.22), graniteLightMat);
+    terraceTrim.position.set(0, 0.54, -7.8);
+    this.seokguramGroup.add(terraceTrim);
+
+    // (4) 중앙 석굴 감실 안쪽 깊숙히 들어간 공간 + 부처님 사진 (z = -9.4 ~ -13.65)
+    const caveFloor = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.16, 4.4), caveDeepMat);
+    caveFloor.position.set(0, 0.48, -11.55);
+    this.seokguramGroup.add(caveFloor);
+
+    const caveCeiling = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.18, 4.4), caveDeepMat);
+    caveCeiling.position.set(0, 4.25, -11.55);
+    this.seokguramGroup.add(caveCeiling);
+
+    [-1.68, 1.68].forEach((cx) => {
+      const caveSide = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.85, 4.4), caveDeepMat);
+      caveSide.position.set(cx, 2.38, -11.55);
+      this.seokguramGroup.add(caveSide);
+    });
+
+    const caveBackWall = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3.9, 0.2), caveDeepMat);
+    caveBackWall.position.set(0, 2.38, -13.55);
+    this.seokguramGroup.add(caveBackWall);
+
+    // 석굴 감실 안쪽 깊숙히 배치된 본존불 사진 (세로 비율을 바로잡고 깊이와 크기를 절제)
+    const stoneBuddhaGroup = new THREE.Group();
+    const seokBuddhaTex = this.createSeokguramPhotoTexture();
 
     const flatBuddhaMat = new THREE.MeshBasicMaterial({
       map: seokBuddhaTex,
@@ -3343,13 +3570,199 @@ class Bomunsa3D {
       side: THREE.DoubleSide,
       depthWrite: false
     });
-    const flatBuddhaMesh = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 6.22), flatBuddhaMat);
-    // 사진 속 중앙 본존불(약 x=402)을 제단 향로·캐릭터 정중앙(x = 0)에 정렬
-    flatBuddhaMesh.position.set(-0.18, 0, 0);
+    const flatBuddhaMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.75, 3.10), flatBuddhaMat);
+    flatBuddhaMesh.position.set(0, 0, 0);
     stoneBuddhaGroup.add(flatBuddhaMesh);
 
-    stoneBuddhaGroup.position.set(0, 2.75, -12.8);
+    stoneBuddhaGroup.position.set(0, 2.30, -12.10);
     this.seokguramGroup.add(stoneBuddhaGroup);
+
+    // (5) 화강암 본체 정면 벽 & 중앙 아치 감실 입구 & 좌우 아치 창문
+    // 중앙 감실 양쪽 화강암 기둥벽 (x = ±1.45, z = -9.4)
+    [-1.50, 1.50].forEach((wx) => {
+      const wallPier = new THREE.Mesh(new THREE.BoxGeometry(0.75, 3.8, 0.55), graniteMidMat);
+      wallPier.position.set(wx, 2.45, -9.45);
+      this.seokguramGroup.add(wallPier);
+    });
+    // 중앙 아치 상부 인방벽 (아치 윗부분을 막아 감실 안쪽만 개방)
+    const centerTopSpandrel = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.82, 0.55), graniteMidMat);
+    centerTopSpandrel.position.set(0, 3.96, -9.45);
+    this.seokguramGroup.add(centerTopSpandrel);
+
+    // 중앙 아치 테두리 몰딩 (사진 속 중앙 감실의 두툼한 화강암 아치)
+    [-1.12, 1.12].forEach((jx) => {
+      const archJamb = new THREE.Mesh(new THREE.BoxGeometry(0.24, 2.55, 0.36), graniteLightMat);
+      archJamb.position.set(jx, 1.82, -9.28);
+      this.seokguramGroup.add(archJamb);
+    });
+    const centralArchRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.12, 0.16, 12, 28, Math.PI),
+      graniteLightMat
+    );
+    centralArchRing.position.set(0, 3.05, -9.22);
+    this.seokguramGroup.add(centralArchRing);
+
+    // 좌·우 아치형 출입문 & 자연 암벽 (사진 속 좌우 문과 바위벽)
+    [-2.58, 2.58].forEach((dx) => {
+      const doorFrameBack = new THREE.Mesh(new THREE.BoxGeometry(1.18, 2.85, 0.25), graniteMidMat);
+      doorFrameBack.position.set(dx, 1.98, -9.48);
+      this.seokguramGroup.add(doorFrameBack);
+
+      const doorGlass = new THREE.Mesh(new THREE.BoxGeometry(0.84, 2.15, 0.14), caveDeepMat);
+      doorGlass.position.set(dx, 1.65, -9.36);
+      this.seokguramGroup.add(doorGlass);
+
+      const doorArchTop = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.42, 0.42, 0.14, 18),
+        caveDeepMat
+      );
+      doorArchTop.rotation.x = Math.PI / 2;
+      doorArchTop.position.set(dx, 2.72, -9.36);
+      this.seokguramGroup.add(doorArchTop);
+
+      const doorArchTrim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.48, 0.085, 10, 20, Math.PI),
+        graniteLightMat
+      );
+      doorArchTrim.position.set(dx, 2.72, -9.29);
+      this.seokguramGroup.add(doorArchTrim);
+
+      const silverFrame = new THREE.MeshStandardMaterial({ color: 0x8f969e, roughness: 0.4, metalness: 0.45 });
+      const doorMidBar = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.045, 0.17), silverFrame);
+      doorMidBar.position.set(dx, 2.68, -9.35);
+      this.seokguramGroup.add(doorMidBar);
+      const doorCenterMul = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.12, 0.17), silverFrame);
+      doorCenterMul.position.set(dx, 1.65, -9.35);
+      this.seokguramGroup.add(doorCenterMul);
+    });
+
+    // 좌·우 바위 절벽/자연 암반 (사진 속 문 양옆의 큰 바위들)
+    [
+      [-3.85, 1.25, -9.35, 0.95], [-4.25, 2.35, -9.45, 0.92], [-3.65, 3.15, -9.55, 0.85],
+      [3.85, 1.25, -9.35, 0.95], [4.25, 2.35, -9.45, 0.92], [3.65, 3.15, -9.55, 0.85],
+      [-5.35, 1.65, -9.55, 1.25], [5.35, 1.65, -9.55, 1.25],
+      [-5.90, 3.05, -10.10, 1.45], [5.90, 3.05, -10.10, 1.45]
+    ].forEach(([rx, ry, rz, rad]) => {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 1), grottoRockMat);
+      rock.position.set(rx, ry, rz);
+      rock.scale.set(1.15, 1.05, 0.85);
+      this.seokguramGroup.add(rock);
+    });
+
+    // (6) 전면 화강암 4기둥 + 수평 석굴암 보/처마 + 처마 밑 붉은 연등 줄 + 지붕 위 수풀과 바위 (상단 하늘 개방)
+    const addGraniteColumn = (cx, cz, isRound) => {
+      const colG = new THREE.Group();
+      colG.position.set(cx, 0.55, cz);
+
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.20, 0.68), graniteMidMat);
+      plinth.position.y = 0.10;
+      colG.add(plinth);
+
+      if (isRound) {
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.27, 3.55, 20), graniteColumnMat);
+        shaft.position.y = 0.20 + 3.55 / 2;
+        colG.add(shaft);
+      } else {
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.46, 3.55, 0.46), graniteColumnMat);
+        shaft.position.y = 0.20 + 3.55 / 2;
+        colG.add(shaft);
+      }
+
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.16, 0.66), graniteLightMat);
+      cap.position.y = 3.80;
+      colG.add(cap);
+
+      this.seokguramGroup.add(colG);
+    };
+
+    // 전면 중앙 원형 기둥 2개 + 양끝 사각 기둥 2개 + 후면 보조 기둥
+    addGraniteColumn(-1.46, -8.12, true);
+    addGraniteColumn(1.46, -8.12, true);
+    addGraniteColumn(-4.25, -8.12, false);
+    addGraniteColumn(4.25, -8.12, false);
+
+    // 화강암 수평 지붕(엔타블러처) - 위로는 열린 하늘이 보이도록 적정 높이 배치
+    const porchSoffit = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.14, 2.0), graniteDarkMat);
+    porchSoffit.position.set(0, 4.38, -8.85);
+    this.seokguramGroup.add(porchSoffit);
+
+    const mainLintel = new THREE.Mesh(new THREE.BoxGeometry(9.9, 0.52, 2.15), graniteLintelMat);
+    mainLintel.position.set(0, 4.68, -8.85);
+    this.seokguramGroup.add(mainLintel);
+
+    const upperCornice = new THREE.Mesh(new THREE.BoxGeometry(10.15, 0.14, 2.25), graniteLightMat);
+    upperCornice.position.set(0, 4.98, -8.85);
+    this.seokguramGroup.add(upperCornice);
+
+    // 처마 아래 줄지어 걸린 붉은 연등 (사진 속 처마 밑 붉은 연등 행렬)
+    const redLanternMat = new THREE.MeshStandardMaterial({
+      color: 0xc92a35,
+      roughness: 0.48,
+      emissive: 0x3b070c,
+      emissiveIntensity: 0.28
+    });
+    const lanternTrimMat = new THREE.MeshStandardMaterial({ color: 0xf0c954, roughness: 0.45 });
+    const redLanternGeo = new THREE.SphereGeometry(0.145, 12, 10);
+    redLanternGeo.scale(1.05, 0.78, 1.05);
+
+    const redLanternX = [
+      -3.85, -3.42, -2.99, -2.56, -2.13,
+      -0.96, -0.48, 0.0, 0.48, 0.96,
+      2.13, 2.56, 2.99, 3.42, 3.85
+    ];
+    [-8.38, -8.78].forEach((lz) => {
+      redLanternX.forEach((lx) => {
+        const rl = new THREE.Mesh(redLanternGeo, redLanternMat);
+        rl.position.set(lx, 4.16, lz);
+        this.seokguramGroup.add(rl);
+
+        const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.032, 0.09, 6), lanternTrimMat);
+        tassel.position.set(lx, 4.01, lz);
+        this.seokguramGroup.add(tassel);
+      });
+    });
+
+    // 지붕 위 자연 바위와 낮게 깔린 수풀 (위쪽 하늘 배경은 시원하게 열려 있음)
+    const roofShrubMat1 = new THREE.MeshStandardMaterial({ color: 0x5c6840, roughness: 0.88, flatShading: true });
+    const roofShrubMat2 = new THREE.MeshStandardMaterial({ color: 0x736446, roughness: 0.90, flatShading: true });
+    for (let sx = -4.6; sx <= 4.61; sx += 0.72) {
+      const topStone = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.28 + (Math.abs(Math.sin(sx * 2.1)) * 0.14), 0),
+        grottoRockMat
+      );
+      topStone.position.set(sx, 5.14, -8.25 - (Math.abs(Math.cos(sx)) * 0.25));
+      topStone.scale.set(1.2, 0.75, 0.9);
+      this.seokguramGroup.add(topStone);
+
+      const bush = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.42 + (Math.abs(Math.cos(sx * 1.7)) * 0.22), 1),
+        sx % 1.44 < 0.72 ? roofShrubMat1 : roofShrubMat2
+      );
+      bush.position.set(sx + 0.15, 5.36, -8.75 - (Math.abs(Math.sin(sx)) * 0.35));
+      bush.scale.set(1.2, 0.85, 1.0);
+      this.seokguramGroup.add(bush);
+    }
+
+    // (7) 정갈한 화강암 공양 제단 (촛대 및 향로는 createCeremonialAltarSet 유지) + 앞쪽 화강암 향로석
+    const seokAltarBase = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.22, 0.78), graniteMidMat);
+    seokAltarBase.position.set(0, 0.11, -7.6);
+    this.seokguramGroup.add(seokAltarBase);
+
+    const seokAltar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.44, 0.75), graniteLightMat);
+    seokAltar.position.set(0, 0.36, -7.6);
+    this.seokguramGroup.add(seokAltar);
+
+    const seokAltarTop = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.07, 0.82), graniteMidMat);
+    seokAltarTop.position.set(0, 0.61, -7.6);
+    this.seokguramGroup.add(seokAltarTop);
+
+    // 사진 속 중앙 제단 앞 사각 화강암 향로석/불전함
+    const frontIncenseBox = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.56, 0.44), graniteLightMat);
+    frontIncenseBox.position.set(0, 0.28, -7.02);
+    this.seokguramGroup.add(frontIncenseBox);
+    const frontIncenseCap = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.08, 0.50), graniteMidMat);
+    frontIncenseCap.position.set(0, 0.58, -7.02);
+    this.seokguramGroup.add(frontIncenseCap);
 
     // (3) [스케치 구현] 부처님 앞의 정갈한 석조 공양 제단 (z = -7.6, y = 0.58)
     const altarStoneMat = new THREE.MeshStandardMaterial({ color: 0x222428, roughness: 0.85 });
@@ -3449,20 +3862,11 @@ class Bomunsa3D {
       this.incenseSmokes.push(smokeGroup);
     };
 
-    // [석굴암 제단]
-    const seokAltar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.44, 0.75), altarStoneMat);
-    seokAltar.position.set(0, 0.36, -7.6);
-    this.seokguramGroup.add(seokAltar);
-
-    const seokAltarTop = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.07, 0.82), altarTopMat);
-    seokAltarTop.position.set(0, 0.61, -7.6);
-    this.seokguramGroup.add(seokAltarTop);
-
     createCeremonialAltarSet(this.seokguramGroup, 0.65, -7.55, 1.5);
 
-    // 석굴암 은은한 원경 스포트라이트
-    const seokguramSpot = new THREE.SpotLight(0xffecd0, 0.6, 30, Math.PI / 4, 0.4, 1.2);
-    seokguramSpot.position.set(0, 6.5, -6.5);
+    // 석굴암 감실 안쪽 본존불을 비추는 은은한 내부 조명
+    const seokguramSpot = new THREE.SpotLight(0xffecd0, 0.95, 30, Math.PI / 4, 0.4, 1.2);
+    seokguramSpot.position.set(0, 4.0, -9.8);
     seokguramSpot.target = stoneBuddhaGroup;
     this.seokguramGroup.add(seokguramSpot);
     this.seokguramGroup.add(seokguramSpot.target);
@@ -3508,15 +3912,15 @@ class Bomunsa3D {
         depthWrite: false
       });
       const dwAura = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 3.4), dwAuraMat);
-      dwAura.position.set(0, 2.88, -9.75);
+      dwAura.position.set(0, 3.43, -9.75);
       this.daewoongGroup.add(dwAura);
 
       const panelMat = new THREE.MeshBasicMaterial({
         map: daewoongTex
       });
-      // 복잡한 나무 액자 틀 없이 심연 속에 아득하고 깊이감 있게 떠오르는 삼존불·후불탱화 (z = -9.6, y = 2.85)
+      // 복잡한 나무 액자 틀 없이 심연 속에 아득하고 깊이감 있게 떠오르는 삼존불·후불탱화 (z = -9.6, y = 3.40)
       const daewoongPanel = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 3.0), panelMat);
-      daewoongPanel.position.set(0, 2.85, -9.6);
+      daewoongPanel.position.set(0, 3.40, -9.6);
       this.daewoongGroup.add(daewoongPanel);
     }
 
@@ -3554,7 +3958,7 @@ class Bomunsa3D {
         map: sansinTex
       });
       const sansinPanel = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 3.12), sansinPanelMat);
-      sansinPanel.position.set(0, 2.82, -9.3);
+      sansinPanel.position.set(0, 3.37, -9.3);
       this.sansinGroup.add(sansinPanel);
     }
 
@@ -3591,14 +3995,14 @@ class Bomunsa3D {
         depthWrite: false
       });
       const jjAura = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 3.3), jjAuraMat);
-      jjAura.position.set(0, 2.58, -9.65);
+      jjAura.position.set(0, 3.13, -9.65);
       this.jijangGroup.add(jjAura);
 
       const jijangPanelMat = new THREE.MeshBasicMaterial({
         map: jijangTex
       });
       const jijangPanel = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 3.1), jijangPanelMat);
-      jijangPanel.position.set(0, 2.55, -9.5);
+      jijangPanel.position.set(0, 3.10, -9.5);
       this.jijangGroup.add(jijangPanel);
     }
 
@@ -3752,26 +4156,17 @@ class Bomunsa3D {
     this.insideGroup.add(this.jijangGroup);
 
     // ==========================================
-    // [공통 전경] [사용자 스케치 완벽 구현] 좌복(방석)과 그 위에 단정히 앉은 내 캐릭터(합장 스님)
-    // [요청 반영] 마루 중앙(z = -2.2)에 아담한 크기로 배치하여 하단 메뉴에 가려지지 않고
-    // 원경의 부처님과 제단을 우러러보는 깊이감 있는 명상 구도 완성
+    // [공통 전경] 네모난 작은 좌복(방석)과 그 위에 단정히 앉은 귀여운 동자승 참배 캐릭터
     // ==========================================
-    const cushionMat = new THREE.MeshStandardMaterial({ color: 0x8a1c26, roughness: 0.65 });
-    // [사용자 요청: 둥근 방석과 포근하고 둥근 결가부좌 곡선 연출]
-    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.08, 32), cushionMat);
-    cushion.position.set(0, 0.04, -5.0);
-    this.insideGroup.add(cushion);
-
-    const cushionTrim = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.47, 0.03, 32), new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.4 }));
-    cushionTrim.position.set(0, 0.015, -5.0);
-    this.insideGroup.add(cushionTrim);
+    const cushionGroup = this.createRectCushionMesh();
+    cushionGroup.position.set(0, 0, -4.9);
+    this.insideGroup.add(cushionGroup);
 
     this.insideMonkGroup = new THREE.Group();
     this.insideMonkGroup.visible = true;
-    // [사용자 스케치 반영: 단정하고 둥근 눈사람/호리병 실루엣의 참배 캐릭터] (z = -4.9)
-    this.insideMonkGroup.position.set(0, 0.10, -4.9);
+    this.insideMonkGroup.position.set(0, 0.022, -4.9);
     this.insideMonkGroup.rotation.y = Math.PI; // 제단(-Z 방향)을 경건히 바라봄
-    this.insideMonkGroup.scale.set(0.35, 0.35, 0.35);
+    this.insideMonkGroup.scale.set(0.35175, 0.35175, 0.35175);
 
     const monkRobeMat = new THREE.MeshStandardMaterial({ color: 0x828892, roughness: 0.65 });
     const monkSkinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.45 });
@@ -3782,55 +4177,47 @@ class Bomunsa3D {
     monkSoftLight.position.set(0, 1.4, -4.5);
     this.insideGroup.add(monkSoftLight);
 
-    // [스케치 완벽 구현: 일체형의 매끄럽고 둥근 조형 & 경건한 절 피봇]
+    // [등부터 엉덩이까지 매끈하고, 바닥 쪽은 방석 위에 차분히 안착하도록 덜 둥글게 다듬은 단일 좌상 몸통]
     this.insideMonkTorsoPivot = new THREE.Group();
-    this.insideMonkTorsoPivot.position.set(0, 0.05, 0);
+    this.insideMonkTorsoPivot.position.set(0, 0, 0);
 
-    // 1. 하단 둥근 가부좌 베이스 (사용자 스케치: 아래가 둥글고 푸근한 모양)
-    const lowerBody = new THREE.Mesh(new THREE.SphereGeometry(0.38, 24, 24), monkRobeMat);
-    lowerBody.scale.set(1.18, 0.88, 1.10);
-    lowerBody.position.set(0, 0.26, 0);
-    this.insideMonkTorsoPivot.add(lowerBody);
-
-    // 2. 상체 둥근 볼륨 (목 쪽으로 부드럽게 이어지는 호리병/달마인형 라인)
-    const upperBody = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), monkRobeMat);
-    upperBody.scale.set(1.0, 1.25, 0.95);
-    upperBody.position.set(0, 0.52, 0);
+    const upperBody = new THREE.Mesh(this.createSittingBodyGeometry(), monkRobeMat);
+    upperBody.position.set(0, 0, 0);
     this.insideMonkTorsoPivot.add(upperBody);
 
-    // 3. 머리 피봇 (경건히 숙여지는 두부)
+    // 2. 머리 피봇 (경건히 숙여지는 아기 동자승 두부)
     this.insideMonkHeadPivot = new THREE.Group();
-    this.insideMonkHeadPivot.position.set(0, 0.88, 0);
+    this.insideMonkHeadPivot.position.set(0, 0.56, 0);
 
-    const sittingHead = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 24), monkSkinMat);
+    const sittingHead = new THREE.Mesh(new THREE.SphereGeometry(0.25, 28, 24), monkSkinMat);
+    sittingHead.scale.set(1.08, 0.98, 1.04);
     this.insideMonkHeadPivot.add(sittingHead);
 
     const sittingNose = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 10), monkSkinMat);
-    sittingNose.position.set(0, 0, 0.24);
+    sittingNose.position.set(0, 0, 0.26);
     this.insideMonkHeadPivot.add(sittingNose);
 
-    [-0.23, 0.23].forEach(ex => {
-      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), monkSkinMat);
+    [-0.26, 0.26].forEach(ex => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), monkSkinMat);
       ear.position.set(ex, 0, 0);
       this.insideMonkHeadPivot.add(ear);
     });
     this.insideMonkTorsoPivot.add(this.insideMonkHeadPivot);
 
-    // 4. [합장 팔 및 위를 향해 바르게 모아진 하얀 손 피봇]
+    // 3. 합장 팔 및 위를 향해 바르게 모아진 하얀 손 피봇
     this.insideMonkArmsPivot = new THREE.Group();
-    this.insideMonkArmsPivot.position.set(0, 0.44, 0.18); // [요청 반영: 소매를 아래로 내려 단아하게 정돈]
+    this.insideMonkArmsPivot.position.set(0, 0.28, 0.20);
 
     [-0.12, 0.12].forEach((sx, idx) => {
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.042, 0.19, 12), monkRobeMat);
-      arm.position.set(sx, -0.04, 0.03); // [요청 반영: 소매를 아래로 내림]
+      arm.position.set(sx, -0.04, 0.03);
       arm.rotation.z = idx === 0 ? -0.62 : 0.62;
-      arm.rotation.x = 0.38; // [요청 반영] 손을 향해 단아하게 벌어지도록 각도 회전
+      arm.rotation.x = 0.38;
       this.insideMonkArmsPivot.add(arm);
     });
 
-    // 위쪽을 향해 바르게 모아진 하얀 합장 손
     const sittingHands = new THREE.Group();
-    sittingHands.position.set(0, 0.06, 0.08); // 소매가 내려간 위치에 맞춤
+    sittingHands.position.set(0, 0.06, 0.08);
 
     const leftWhiteH = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.038, 0.15, 12), monkWhiteMat);
     leftWhiteH.scale.set(0.55, 1.0, 1.2);
@@ -3869,24 +4256,61 @@ class Bomunsa3D {
     this.scene.add(this.insideGroup);
   }
 
-  // 전각 내부 동시 입장 시 다른 참배객용 좌복 + 앉은 캐릭터 메시 (정좌 자세 유지)
+  // [공용] 아랫부분이 지나치게 공처럼 둥글지 않고 방석 위에 차분히 안착하는 좌상 몸통 지오메트리
+  createSittingBodyGeometry() {
+    const pts = [
+      new THREE.Vector2(0.00, 0.00),
+      new THREE.Vector2(0.24, 0.00),
+      new THREE.Vector2(0.32, 0.03),
+      new THREE.Vector2(0.35, 0.10),
+      new THREE.Vector2(0.33, 0.20),
+      new THREE.Vector2(0.28, 0.32),
+      new THREE.Vector2(0.20, 0.42),
+      new THREE.Vector2(0.11, 0.47),
+      new THREE.Vector2(0.00, 0.48)
+    ];
+    const geo = new THREE.LatheGeometry(pts, 28);
+    geo.scale(1.08, 1.0, 0.98);
+    return geo;
+  }
+
+  // [공용] 납작하고 단정한 네모 좌복(방석) 메시 생성기 (내 캐릭터 & 동시 입장 참배객 공용)
+  createRectCushionMesh() {
+    const group = new THREE.Group();
+
+    const cushionTrim = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.008, 0.33),
+      new THREE.MeshStandardMaterial({ color: 0xc8a23c, roughness: 0.45 })
+    );
+    cushionTrim.position.set(0, 0.004, 0);
+    group.add(cushionTrim);
+
+    const cushion = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.014, 0.30),
+      new THREE.MeshStandardMaterial({ color: 0x8a1c26, roughness: 0.72 })
+    );
+    cushion.position.set(0, 0.012, 0);
+    group.add(cushion);
+
+    const cushionTop = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.006, 0.26),
+      new THREE.MeshStandardMaterial({ color: 0x98232e, roughness: 0.75 })
+    );
+    cushionTop.position.set(0, 0.020, 0);
+    group.add(cushionTop);
+
+    return group;
+  }
+
+  // 전각 내부 동시 입장 시 다른 참배객용 납작한 네모 좌복 + 앉은 캐릭터 메시 (함께 절하기 피봇 포함)
   buildInsideSittingMonkMesh(robeColorHex = 0x828892) {
     const slotGroup = new THREE.Group();
 
-    const cushionMat = new THREE.MeshStandardMaterial({ color: 0x8a1c26, roughness: 0.65 });
-    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.08, 24), cushionMat);
-    cushion.position.set(0, 0.04, -0.1);
-    slotGroup.add(cushion);
-
-    const cushionTrim = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.45, 0.47, 0.03, 24),
-      new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.4 })
-    );
-    cushionTrim.position.set(0, 0.015, -0.1);
-    slotGroup.add(cushionTrim);
+    const cushionGroup = this.createRectCushionMesh();
+    slotGroup.add(cushionGroup);
 
     const monkGroup = new THREE.Group();
-    monkGroup.position.set(0, 0.10, 0);
+    monkGroup.position.set(0, 0.022, 0);
     monkGroup.rotation.y = Math.PI;
     monkGroup.scale.set(0.35, 0.35, 0.35);
 
@@ -3894,47 +4318,50 @@ class Bomunsa3D {
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdfc4, roughness: 0.45 });
     const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
 
-    const lowerBody = new THREE.Mesh(new THREE.SphereGeometry(0.38, 18, 18), robeMat);
-    lowerBody.scale.set(1.18, 0.88, 1.10);
-    lowerBody.position.set(0, 0.31, 0);
-    monkGroup.add(lowerBody);
+    const torsoPivot = new THREE.Group();
+    torsoPivot.position.set(0, 0, 0);
 
-    const upperBody = new THREE.Mesh(new THREE.SphereGeometry(0.32, 18, 18), robeMat);
-    upperBody.scale.set(1.0, 1.25, 0.95);
-    upperBody.position.set(0, 0.57, 0);
-    monkGroup.add(upperBody);
+    const upperBody = new THREE.Mesh(this.createSittingBodyGeometry(), robeMat);
+    upperBody.position.set(0, 0, 0);
+    torsoPivot.add(upperBody);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 18), skinMat);
-    head.position.set(0, 0.93, 0);
-    monkGroup.add(head);
+    const headPivot = new THREE.Group();
+    headPivot.position.set(0, 0.56, 0);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 24, 20), skinMat);
+    head.scale.set(1.08, 0.98, 1.04);
+    headPivot.add(head);
 
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), skinMat);
-    nose.position.set(0, 0.93, 0.24);
-    monkGroup.add(nose);
+    nose.position.set(0, 0, 0.26);
+    headPivot.add(nose);
 
-    [-0.23, 0.23].forEach(ex => {
-      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), skinMat);
-      ear.position.set(ex, 0.93, 0);
-      monkGroup.add(ear);
+    [-0.26, 0.26].forEach(ex => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), skinMat);
+      ear.position.set(ex, 0, 0);
+      headPivot.add(ear);
     });
+    torsoPivot.add(headPivot);
 
-    const armsGroup = new THREE.Group();
-    armsGroup.position.set(0, 0.49, 0.18);
+    const armsPivot = new THREE.Group();
+    armsPivot.position.set(0, 0.28, 0.20);
     [-0.12, 0.12].forEach((sx, idx) => {
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.042, 0.19, 10), robeMat);
       arm.position.set(sx, -0.04, 0.03);
       arm.rotation.z = idx === 0 ? -0.62 : 0.62;
       arm.rotation.x = 0.38;
-      armsGroup.add(arm);
+      armsPivot.add(arm);
     });
 
     const hands = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), whiteMat);
     hands.scale.set(0.85, 1.35, 0.85);
     hands.position.set(0, 0.09, 0.08);
-    armsGroup.add(hands);
-    monkGroup.add(armsGroup);
+    armsPivot.add(hands);
+    torsoPivot.add(armsPivot);
 
+    monkGroup.add(torsoPivot);
     slotGroup.add(monkGroup);
+    slotGroup.userData.rig = { monkGroup, torsoPivot, headPivot, armsPivot };
     return slotGroup;
   }
 
@@ -3942,6 +4369,21 @@ class Bomunsa3D {
   performThreeBows(onRoundChange, onComplete) {
     if (this.isBowing) return;
     this.isBowing = true;
+    this.bowSeq = (this.bowSeq || 0) + 1;
+    if (window.templeSync) {
+      window.templeSync.broadcastState({
+        x: this.playerPos.x,
+        z: this.playerPos.z,
+        rotY: this.characterGroup ? this.characterGroup.rotation.y : this.currentCharRotation,
+        isWalking: false,
+        mode: this.currentMode,
+        isBowing: true,
+        bowSeq: this.bowSeq,
+        busyLoc: this.getLocalBusyLoc(),
+        queueLoc: this.waitingForLoc || null,
+        queuedAt: this.waitingQueuedAt || null
+      }, true);
+    }
 
     let currentBow = 1;
     const totalBows = 3;
@@ -3979,9 +4421,9 @@ class Bomunsa3D {
         this.insideMonkTorsoPivot.rotation.x = bowAngle;
         this.insideMonkHeadPivot.rotation.x = headAngle;
         this.insideMonkTorsoPivot.scale.set(1.0 + squash * 0.5, 1.0 - squash, 1.0 + squash * 0.5);
-        this.insideMonkArmsPivot.position.y = 0.48 - ease * 0.10;
+        this.insideMonkArmsPivot.position.y = 0.28 - ease * 0.08;
         this.insideMonkArmsPivot.rotation.x = ease * 0.30;
-        this.insideMonkGroup.position.y = 0.12; // 지면 및 좌복 위 안전 고정
+        this.insideMonkGroup.position.y = 0.022; // 지면 및 좌복 위 안전 고정
 
         if (progress < 1.0) {
           requestAnimationFrame(animBow);
@@ -3990,14 +4432,28 @@ class Bomunsa3D {
           this.insideMonkTorsoPivot.rotation.x = 0;
           this.insideMonkHeadPivot.rotation.x = 0;
           this.insideMonkTorsoPivot.scale.set(1.0, 1.0, 1.0);
-          this.insideMonkArmsPivot.position.y = 0.48;
+          this.insideMonkArmsPivot.position.y = 0.28;
           this.insideMonkArmsPivot.rotation.x = 0;
-          this.insideMonkGroup.position.y = 0.12;
+          this.insideMonkGroup.position.y = 0.022;
 
           if (bowNum < totalBows) {
             setTimeout(() => runSingleBow(bowNum + 1), 400);
           } else {
             this.isBowing = false;
+            if (window.templeSync) {
+              window.templeSync.broadcastState({
+                x: this.playerPos.x,
+                z: this.playerPos.z,
+                rotY: this.characterGroup ? this.characterGroup.rotation.y : this.currentCharRotation,
+                isWalking: false,
+                mode: this.currentMode,
+                isBowing: false,
+                bowSeq: this.bowSeq,
+                busyLoc: this.getLocalBusyLoc(),
+                queueLoc: this.waitingForLoc || null,
+                queuedAt: this.waitingQueuedAt || null
+              }, true);
+            }
             if (window.templeAudio) window.templeAudio.playSingingBowl();
             if (onComplete) onComplete();
           }
@@ -4159,9 +4615,35 @@ class Bomunsa3D {
     lightBox.position.y = 1.3;
     group.add(lightBox);
 
-    const lampLight = new THREE.PointLight(0xffb84d, 0.4, 4);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0xffd27d,
+      emissive: 0xff9f2e,
+      emissiveIntensity: 0.05,
+      transparent: true,
+      opacity: 0.25
+    });
+    const coreMesh = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.24, 0.54), coreMat);
+    coreMesh.position.y = 1.3;
+    group.add(coreMesh);
+
+    const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.createSoftAureoleTexture(),
+      color: 0xffb84d,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    }));
+    glowSprite.position.set(0, 1.3, 0);
+    glowSprite.scale.set(1.8, 1.8, 1.8);
+    group.add(glowSprite);
+
+    const lampLight = new THREE.PointLight(0xffb84d, 0, 4);
     lampLight.position.set(0, 1.3, 0);
     group.add(lampLight);
+
+    if (this.outdoorStoneLanterns) {
+      this.outdoorStoneLanterns.push({ light: lampLight, coreMat, glowSprite });
+    }
 
     const roof = new THREE.Mesh(new THREE.ConeGeometry(0.65, 0.35, 8), stoneMat);
     roof.position.y = 1.65;
@@ -4395,6 +4877,13 @@ class Bomunsa3D {
     this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
+    if (this.activeLocation && this.activeLocation.id === 'gwanyok' && this.gwanyokAltarDipper) {
+      const dipperHits = this.raycaster.intersectObject(this.gwanyokAltarDipper, true);
+      if (dipperHits.length > 0) {
+        if (window.onGwanyokLadleClick) window.onGwanyokLadleClick();
+        return;
+      }
+    }
     const intersects = this.raycaster.intersectObject(this.groundMesh);
 
     if (intersects.length > 0) {
@@ -4539,13 +5028,12 @@ class Bomunsa3D {
         return;
       }
       if ((this.isGwanyokActive || (this.activeLocation && this.activeLocation.id === 'gwanyok' && !this.isWalking)) && this.gwanyokPos) {
-        // [사용자 요청 반영: 상단 안내 메뉴에 가리지 않도록 아기 부처님과 캐릭터를 화면 중앙~하단 쪽에 배치]
+        // 멀리서 캐릭터와 아기 부처님을 동시에 한 화면에서 볼 수 있는 구도
         const gwanyokCamPos = this.isGwanyokActive
-          ? new THREE.Vector3(this.gwanyokPos.x + 0.85, 1.68, this.gwanyokPos.z + 2.85)
-          : new THREE.Vector3(this.gwanyokPos.x, 1.72, this.gwanyokPos.z + 3.25);
+          ? new THREE.Vector3(this.gwanyokPos.x + 1.85, 1.95, this.gwanyokPos.z + 5.25)
+          : new THREE.Vector3(this.gwanyokPos.x + 1.55, 1.90, this.gwanyokPos.z + 5.00);
         this.camera.position.lerp(gwanyokCamPos, 0.12);
-        // 카메라 시선 중심(lookAt Y)을 1.85m로 높여 아기 부처님과 캐릭터가 상단 메뉴 아래쪽에 온전히 보이도록 조정
-        this.camera.lookAt(this.gwanyokPos.x, 1.85, this.gwanyokPos.z + 0.25);
+        this.camera.lookAt(this.gwanyokPos.x, 1.25, this.gwanyokPos.z + 0.75);
         return;
       }
       const targetLookY = this.playerPos.y + 1.05;
@@ -4690,13 +5178,35 @@ class Bomunsa3D {
     return this.pagodaIsRunning;
   }
 
-  // [관욕식 인터랙션: 캐릭터가 표주박을 들고 아기 부처님께 감로수를 세 번 붓는 동작]
+  // [관욕식 인터랙션: 바가지를 누를 때마다 1회씩 아기 부처님께 감로수를 붓는 동작]
+  performGwanyokStep(stepNumber, onCompleteCallback) {
+    if (this.isGwanyokActive || !this.gwanyokPos) return;
+
+    this.isGwanyokActive = true;
+    this.gwanyokStep = stepNumber || 1;
+    this.gwanyokTime = 0;
+    this.gwanyokSingleMode = true;
+    this.onGwanyokComplete = onCompleteCallback;
+
+    // 관욕대 정면 바로 앞 타겟 위치 (작은 탁자와 겹치지 않도록 1.48m 앞 정렬)
+    this.playerPos.set(this.gwanyokPos.x, 0, this.gwanyokPos.z + 1.48);
+    this.characterGroup.position.copy(this.playerPos);
+    this.currentCharRotation = Math.PI; // 북쪽 관욕대 정면 응시
+    this.characterGroup.rotation.y = Math.PI;
+    this.resetCharacterPose();
+
+    if (window.templeAudio) {
+      window.templeAudio.playWaterPour();
+    }
+  }
+
   performGwanyok(onStepCallback, onCompleteCallback) {
     if (this.isGwanyokActive || !this.gwanyokPos) return;
 
     this.isGwanyokActive = true;
     this.gwanyokStep = 1;
     this.gwanyokTime = 0;
+    this.gwanyokSingleMode = false;
     this.onGwanyokStep = onStepCallback;
     this.onGwanyokComplete = onCompleteCallback;
 
@@ -4730,8 +5240,6 @@ class Bomunsa3D {
     if (this.activeLocation.enterType === 'pagoda') {
       this.startPagodaSpin();
     } else {
-      this.setupDarkTempleInterior();
-
       if (this.activeLocation.enterType === 'daewoong') {
         this.currentMode = 'inside_daewoong';
       } else if (this.activeLocation.enterType === 'jijang') {
@@ -4741,6 +5249,7 @@ class Bomunsa3D {
       } else if (this.activeLocation.enterType === 'sansin') {
         this.currentMode = 'inside_sansin';
       }
+      this.setupDarkTempleInterior();
     }
   }
 
@@ -4759,10 +5268,24 @@ class Bomunsa3D {
     return litCount;
   }
 
-  syncJijangLanterns(count) {
-    if (!this.jijangLanterns) return;
+  syncJijangLanterns(myCount = 0, otherCount = 0) {
+    if (!this.jijangLanterns || this.jijangLanterns.length === 0) return;
+    // 효과 장치: 주변 등 중 몇 개(대칭 4개)만 은은히 켜두고, 정중앙 등(index 0)은 내 폰에서 발원문을 올릴 때 켜짐
+    const ambientIndices = new Set([1, 2, 7, 8]);
+    const extraMineCount = Math.max(0, myCount - 1);
+    const extraSlots = [3, 4, 5, 6, 9, 10, 11];
+    const extraLitSet = new Set(extraSlots.slice(0, extraMineCount));
+
     for (let i = 0; i < this.jijangLanterns.length; i++) {
-      this.setJijangLanternLit(this.jijangLanterns[i], i < count);
+      let shouldLit = false;
+      if (i === 0) {
+        shouldLit = myCount > 0;
+      } else if (ambientIndices.has(i)) {
+        shouldLit = otherCount > 0 || myCount > 0;
+      } else {
+        shouldLit = extraLitSet.has(i);
+      }
+      this.setJijangLanternLit(this.jijangLanterns[i], shouldLit);
     }
   }
 
@@ -4811,18 +5334,24 @@ class Bomunsa3D {
   setupDarkTempleInterior() {
     const enterType = this.activeLocation ? this.activeLocation.enterType : 'seokguram';
     if (enterType === 'seokguram') {
-      this.scene.background.setHex(0x020305);
-      this.scene.fog.color.setHex(0x020305);
-      this.scene.fog.density = 0.024;
+      // 석굴암은 야외 화강암 노상 공간 + 하늘 배경(시간대별 낮/저녁 자동 반영)
+      if (this.insideFloorMesh) this.insideFloorMesh.visible = false;
+      if (this.cosmicDust) this.cosmicDust.visible = false;
+      this.applyTimeOfDayAtmosphere();
+      if (this.sunLight) this.sunLight.castShadow = false;
+      this.insideCandleLight.intensity = 0.25;
     } else {
+      if (this.insideFloorMesh) this.insideFloorMesh.visible = true;
+      if (this.cosmicDust) this.cosmicDust.visible = true;
       this.scene.background.setHex(0x050608); // [사용자 요청] 나머지 공간은 깊고 고요한 어둠으로 처리
       this.scene.fog.color.setHex(0x050608);
       this.scene.fog.density = 0.012;
+      this.sunLight.intensity = 0.02;
+      this.hemiLight.intensity = 0.12;
+      if (this.ambientLight) this.ambientLight.intensity = 0.25;
+      if (this.renderer) this.renderer.toneMappingExposure = 1.05;
+      this.insideCandleLight.intensity = 0.25;
     }
-
-    this.sunLight.intensity = 0.02;
-    this.hemiLight.intensity = 0.12;
-    this.insideCandleLight.intensity = 0.25;
     // 제단 촛불 위치 (z = -7.55, y = 1.25)
     this.insideCandleLight.position.set(0, -80 + 1.25, -7.55);
 
@@ -4873,11 +5402,8 @@ class Bomunsa3D {
     this.cameraDistance = 7.5;
     this.cameraAngles = { theta: 0, phi: 0.42 };
 
-    this.scene.background.setHex(0xdcebf5);
-    this.scene.fog.color.setHex(0xdcebf5);
-    this.scene.fog.density = 0.012;
-    this.sunLight.intensity = 1.25;
-    this.hemiLight.intensity = 0.75;
+    if (this.sunLight) this.sunLight.castShadow = true;
+    this.applyTimeOfDayAtmosphere();
     this.insideCandleLight.intensity = 0;
 
     if (this.insideGroup) this.insideGroup.visible = false;
@@ -5058,28 +5584,30 @@ class Bomunsa3D {
         }
       }
 
-      // [관욕식 감로수 붓기 3회 애니메이션]
+      // [관욕식 감로수 붓기 애니메이션 (단일 바가지 1회 또는 3회 연속)]
       if (this.isGwanyokActive) {
         this.gwanyokTime += delta;
-        const totalDurationPerPour = 2.4;
+        const totalDurationPerPour = 3.4;
         const totalTime = this.gwanyokTime;
-        const currentPour = Math.min(3, Math.floor(totalTime / totalDurationPerPour) + 1);
 
-        if (currentPour !== this.gwanyokStep && currentPour <= 3) {
-          this.gwanyokStep = currentPour;
-          if (window.templeAudio) window.templeAudio.playWaterPour();
-          if (this.onGwanyokStep) this.onGwanyokStep(currentPour, 3);
+        if (!this.gwanyokSingleMode) {
+          const currentPour = Math.min(3, Math.floor(totalTime / totalDurationPerPour) + 1);
+          if (currentPour !== this.gwanyokStep && currentPour <= 3) {
+            this.gwanyokStep = currentPour;
+            if (window.templeAudio) window.templeAudio.playWaterPour();
+            if (this.onGwanyokStep) this.onGwanyokStep(currentPour, 3);
+          }
         }
 
         const cycleTime = totalTime % totalDurationPerPour;
-        // 상체 앞으로 숙이며 표주박으로 감로수 붓는 동작 연출
+        // 상체 앞으로 숙이며 표주박으로 감로수 붓는 동작 연출 (물 흐르는 구간 +1초 연장)
         let pourProgress = 0;
         if (cycleTime < 0.6) {
           pourProgress = Math.sin((cycleTime / 0.6) * (Math.PI / 2));
-        } else if (cycleTime < 1.6) {
+        } else if (cycleTime < 2.6) {
           pourProgress = 1.0;
         } else {
-          pourProgress = 1.0 - (cycleTime - 1.6) / 0.8;
+          pourProgress = Math.max(0, 1.0 - (cycleTime - 2.6) / 0.8);
         }
 
         if (this.charLimbs && this.charLimbs.upperBody) {
@@ -5088,9 +5616,9 @@ class Bomunsa3D {
           this.charLimbs.gassho.rotation.x = pourProgress * 0.45;
         }
 
-        // 큼직하고 선명한 물방울 파티클 떨어지는 애니메이션
+        // 큼직하고 선명한 물방울 파티클 떨어지는 애니메이션 (1초 더 길게 물이 흐름)
         if (this.gwanyokSplashDrops) {
-          const isPouring = (cycleTime >= 0.45 && cycleTime <= 1.85);
+          const isPouring = (cycleTime >= 0.45 && cycleTime <= 2.85);
           this.gwanyokSplashDrops.forEach((drop, idx) => {
             if (isPouring) {
               drop.visible = true;
@@ -5105,16 +5633,19 @@ class Bomunsa3D {
           });
         }
 
-        // 3회 관욕식 완료
-        if (totalTime >= totalDurationPerPour * 3) {
+        const targetEndTime = this.gwanyokSingleMode ? totalDurationPerPour : totalDurationPerPour * 3;
+        if (totalTime >= targetEndTime) {
+          const finishedStep = this.gwanyokStep;
           this.isGwanyokActive = false;
           if (this.gwanyokSplashDrops) {
             this.gwanyokSplashDrops.forEach(d => { d.visible = false; });
           }
           this.resetCharacterPose();
-          if (window.templeAudio) window.templeAudio.playSingingBowl(240, 7.0);
+          if (!this.gwanyokSingleMode || finishedStep >= 3) {
+            if (window.templeAudio) window.templeAudio.playSingingBowl(240, 7.0);
+          }
           if (this.onGwanyokComplete) {
-            this.onGwanyokComplete();
+            this.onGwanyokComplete(finishedStep);
           }
         }
       }
@@ -5347,6 +5878,8 @@ class Bomunsa3D {
         rotY: this.characterGroup ? this.characterGroup.rotation.y : this.currentCharRotation,
         isWalking: Boolean(this.isWalking || this.pagodaIsRunning),
         mode: this.currentMode,
+        isBowing: Boolean(this.isBowing),
+        bowSeq: this.bowSeq || 0,
         busyLoc,
         queueLoc,
         queuedAt
@@ -5357,7 +5890,8 @@ class Bomunsa3D {
   }
 
   isQueueLocation(locationId) {
-    return locationId === 'gwanyok' || locationId === 'beomjong' || locationId === 'pagoda';
+    // 탑돌이(pagoda)는 순서 대기 없이 여러 참배객이 함께 돌 수 있음
+    return locationId === 'gwanyok' || locationId === 'beomjong';
   }
 
   getLocalBusyLoc() {
@@ -5499,6 +6033,9 @@ class Bomunsa3D {
           targetRotY: st.rotY ?? Math.PI,
           isWalking: Boolean(st.isWalking),
           mode: st.mode || 'outside',
+          isBowing: Boolean(st.isBowing),
+          bowSeq: st.bowSeq || 0,
+          bowStartTime: st.isBowing ? performance.now() : 0,
           busyLoc: st.busyLoc || null,
           queueLoc: st.queueLoc || null,
           queuedAt: st.queuedAt || null,
@@ -5511,6 +6048,13 @@ class Bomunsa3D {
         entry.targetRotY = st.rotY ?? Math.PI;
         entry.isWalking = Boolean(st.isWalking);
         entry.mode = st.mode || 'outside';
+        const nextIsBowing = Boolean(st.isBowing);
+        const nextBowSeq = st.bowSeq || 0;
+        if (nextIsBowing && (!entry.isBowing || nextBowSeq !== entry.bowSeq)) {
+          entry.bowStartTime = performance.now();
+        }
+        entry.isBowing = nextIsBowing;
+        entry.bowSeq = nextBowSeq;
         entry.busyLoc = st.busyLoc || null;
         entry.queueLoc = st.queueLoc || null;
         entry.queuedAt = st.queuedAt || null;
@@ -5554,6 +6098,38 @@ class Bomunsa3D {
         const slot = insideSlots[idx % insideSlots.length];
         entry.insideGroup.position.set(slot.x, 0, slot.z);
         entry.insideGroup.visible = true;
+
+        const rig = entry.insideGroup.userData && entry.insideGroup.userData.rig;
+        if (rig) {
+          let ease = 0;
+          if (entry.isBowing && entry.bowStartTime) {
+            const totalElapsed = (performance.now() - entry.bowStartTime) / 1000;
+            const cycleDur = 3.8; // 3.4초 절 + 0.4초 휴식
+            if (totalElapsed < cycleDur * 3) {
+              const inCycle = totalElapsed % cycleDur;
+              if (inCycle < 3.4) {
+                const progress = inCycle / 3.4;
+                if (progress < 0.45) {
+                  const t = progress / 0.45;
+                  ease = t * t * (3 - 2 * t);
+                } else if (progress < 0.62) {
+                  ease = 1.0;
+                } else {
+                  const t = (progress - 0.62) / 0.38;
+                  ease = 1 - t * t * (3 - 2 * t);
+                }
+              }
+            }
+          }
+          const bowAngle = ease * 0.46;
+          const headAngle = ease * 0.30;
+          const squash = ease * 0.08;
+          rig.torsoPivot.rotation.x = bowAngle;
+          rig.headPivot.rotation.x = headAngle;
+          rig.torsoPivot.scale.set(1.0 + squash * 0.5, 1.0 - squash, 1.0 + squash * 0.5);
+          rig.armsPivot.position.y = 0.28 - ease * 0.08;
+          rig.armsPivot.rotation.x = ease * 0.30;
+        }
       });
       return;
     }

@@ -72,14 +72,12 @@
       <h1>저 절로 <span>도심속 쉼과 명상</span></h1>
     </div>
     <div class="header-actions">
-      <button id="mute-btn" class="icon-btn" title="소리 켜기/끄기">🔔</button>
-      <button id="fullscreen-btn" class="icon-btn" title="전체화면">⛶</button>
       <button id="credit-btn" class="icon-btn" title="음원 출처 및 저작권 안내">ⓘ</button>
     </div>
   </header>
 
-  <!-- 동시접속 인원 표시 배지 -->
-  <div id="presence-badge" class="presence-badge">👥 도량 1명</div>
+  <!-- 동시접속 인원 및 누적 방문자수 한 줄 표시 배지 -->
+  <div id="presence-badge" class="presence-badge">👥 누적 방문 1명 · 도량 1명</div>
 
   <!-- 오른쪽 발원문 보기 버튼 (현재 전각의 다른 참배객 발원문 열람) -->
   <button id="view-prayers-btn" class="view-prayers-fab" style="display: none;" type="button">
@@ -92,7 +90,7 @@
 
   <!-- 조작 힌트 배지 -->
   <div id="control-hint" class="control-hint">
-    바닥을 탭(터치)하면 걸어갑니다 · 화면을 밀면 둘러봅니다
+    터치하거나 아래 이동장소를 누르면 이동합니다.
   </div>
 
   <!-- 전각 근접 팝업 카드 -->
@@ -103,6 +101,15 @@
     <div class="location-card-actions">
       <button id="enter-btn" class="enter-btn">
         <span>🚪</span> 전각 안으로 입장하기
+      </button>
+      <button id="gwanyok-ladle-btn" class="gwanyok-ladle-btn" style="display: none;" type="button" title="바가지로 감로수 붓기">
+        <svg viewBox="0 0 36 36" class="ladle-svg" aria-hidden="true">
+          <!-- 표주박(바가지) 형상 -->
+          <path d="M6 17 C6 24 11 28 17.5 28 C23.5 28 27.5 24 27.5 17 Z" fill="#e8c374" stroke="#6a4512" stroke-width="1.8" stroke-linejoin="round"/>
+          <ellipse cx="16.75" cy="17" rx="10.75" ry="3.2" fill="#9bd8f5" stroke="#6a4512" stroke-width="1.6"/>
+          <path d="M26.5 16.5 L34 11.5" stroke="#7a4f16" stroke-width="3.2" stroke-linecap="round"/>
+        </svg>
+        <span id="gwanyok-ladle-badge" class="ladle-step-badge" style="display: none;"></span>
       </button>
     </div>
     <div id="gwanyok-meditation-msg" class="gwanyok-meditation-msg" style="display: none;"></div>
@@ -139,30 +146,46 @@
       <span id="bow-status-text">첫 번째 절: 지난 모든 허물과 번뇌를 비워냅니다.</span>
     </div>
 
-    <!-- [사용자 요청 반영: 메뉴 밖의 박스 없이 메뉴 버튼만 심플하게 배치, 아이콘 없이 글씨만 표출] -->
-    <div class="meditation-menu-box">
-      <div class="action-grid">
-        <button id="bow-btn" class="control-grid-btn bow-highlight">
-          <span id="bow-text">삼배 올리기</span>
+    <!-- [전각별 경전 독송 자막 카드] -->
+    <div id="chant-status-card" class="chant-status-card" style="display: none;">
+      <span id="chant-status-text">천수경 독송 중...</span>
+    </div>
+
+    <!-- [사용자 요청 반영: 평소에는 '참배 · 수행하기'와 '마당으로' 2개만 단정히 두고, 누르면 차분한 수행 메뉴가 펼쳐짐] -->
+    <div id="meditation-menu-box" class="meditation-menu-box">
+      <div id="meditation-drawer" class="meditation-drawer">
+        <button id="chant-btn" class="control-grid-btn chant-btn" style="display: none;">
+          <span id="chant-text">경전 듣기</span>
         </button>
-        <button id="start-meditation-btn" class="control-grid-btn highlight">
-          <span id="meditation-btn-text">호흡 명상</span>
-        </button>
-        <button id="candle-btn" class="control-grid-btn">
-          <span id="candle-text">초 켜기</span>
-        </button>
-        <button id="incense-btn" class="control-grid-btn">
-          <span id="incense-text">향 피우기</span>
-        </button>
+        <div class="action-grid">
+          <button id="bow-btn" class="control-grid-btn bow-highlight">
+            <span id="bow-text">삼배 올리기</span>
+          </button>
+          <button id="start-meditation-btn" class="control-grid-btn highlight">
+            <span id="meditation-btn-text">호흡 명상</span>
+          </button>
+          <button id="candle-btn" class="control-grid-btn">
+            <span id="candle-text">초 켜기</span>
+          </button>
+          <button id="incense-btn" class="control-grid-btn">
+            <span id="incense-text">향 피우기</span>
+          </button>
+        </div>
+
+        <div class="menu-bottom-row">
+          <button id="instrument-btn" class="control-grid-btn">
+            <span id="instrument-text">싱잉볼 치기</span>
+          </button>
+          <button id="open-prayer-btn" class="control-grid-btn prayer-wide-btn">
+            <svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>
+            <span id="open-prayer-text">마음 발원문</span>
+          </button>
+        </div>
       </div>
 
-      <div class="menu-bottom-row">
-        <button id="instrument-btn" class="control-grid-btn">
-          <span id="instrument-text">싱잉볼 치기</span>
-        </button>
-        <button id="open-prayer-btn" class="control-grid-btn prayer-wide-btn">
-          <svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>
-          <span id="open-prayer-text">마음 발원문</span>
+      <div class="meditation-footer-bar">
+        <button id="meditation-menu-toggle" class="control-grid-btn menu-toggle-btn" type="button">
+          <span id="meditation-menu-toggle-text">🙏 참배 · 수행하기</span>
         </button>
         <button id="exit-btn" class="exit-btn">
           마당으로
@@ -199,16 +222,19 @@
   <!-- 음원 출처 및 저작권 안내 모달 -->
   <div id="credit-modal-overlay" class="prayer-modal-overlay">
     <div class="prayer-modal credit-modal">
-      <h3>음원 출처 및 저작권 안내</h3>
+      <h3>음원 출처 안내</h3>
       <div class="credit-list">
         <div class="credit-item">
-          <strong>목탁 소리 (원제: 목탁3)</strong>
-          <p>저작자: 김용배 · 출처: <a href="https://gongu.copyright.or.kr/gongu/wrt/wrt/view.do?menuNo=200020&wrtSn=13253417" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a></p>
-          <p>라이선스: <a href="https://creativecommons.org/licenses/by/4.0/deed.ko" target="_blank" rel="noopener noreferrer">CC BY 4.0 (저작자표시)</a></p>
+          <strong>목탁 소리 (목탁3)</strong>
+          <p>김용배 · <a href="https://gongu.copyright.or.kr/gongu/wrt/wrt/view.do?menuNo=200020&wrtSn=13253417" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (<a href="https://creativecommons.org/licenses/by/4.0/deed.ko" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>)</p>
         </div>
         <div class="credit-item">
           <strong>요령·기타 사찰 음원</strong>
-          <p>출처: <a href="https://gongu.copyright.or.kr/" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (CC BY 4.0 이용허락 조건 준수)</p>
+          <p><a href="https://gongu.copyright.or.kr/" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (CC BY 4.0)</p>
+        </div>
+        <div class="credit-item">
+          <strong>천수경 독송</strong>
+          <p>무료 공개 음원</p>
         </div>
       </div>
       <div class="prayer-modal-actions">
@@ -222,6 +248,10 @@
 
   <!-- 다른 참배객 근접 시 합장 인사 버튼 -->
   <button id="greet-btn" class="greet-fab" style="display: none;" type="button">🙏 합장 인사</button>
+
+  <!-- 오른쪽 하단 스피커 버튼 및 1회성 소리 안내 설명 버튼 -->
+  <button id="sound-guide-tip" class="sound-guide-tip" type="button">소리듣기를 원하시면 오른쪽 하단의 스피커 표시를 누르세요.</button>
+  <button id="mute-btn" class="speaker-fab" title="소리 켜기/끄기" type="button">🔊</button>
 
   <!-- 하단 랜드마크 내비게이션 바 (요청 순서: 입구, 관욕식, 대웅전, 탑전, 석굴암, 산령각, 범종, 지장전, 불사중 건물) -->
   <nav id="bottom-nav" class="bottom-nav-container">

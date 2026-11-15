@@ -37,3 +37,39 @@ create policy "Users can delete own prayers"
 
 -- 3. 실시간 업데이트(Realtime) 활성화
 alter publication supabase_realtime add table public.prayers;
+
+-- 4. 도량 누적 방문자수 테이블 및 증가 함수
+create table if not exists public.temple_stats (
+  key text primary key,
+  count bigint not null default 0
+);
+
+insert into public.temple_stats (key, count)
+values (
+  'total_visitors',
+  coalesce((select count(distinct owner_id) from public.prayers), 0)
+)
+on conflict (key) do nothing;
+
+alter table public.temple_stats enable row level security;
+
+create policy "Anyone can read temple_stats"
+  on public.temple_stats for select
+  using (true);
+
+create or replace function public.increment_total_visitors()
+returns bigint
+language plpgsql
+security definer
+as $$
+declare
+  new_count bigint;
+begin
+  insert into public.temple_stats (key, count)
+  values ('total_visitors', 1)
+  on conflict (key) do update
+    set count = public.temple_stats.count + 1
+  returning count into new_count;
+  return new_count;
+end;
+$$;
