@@ -1317,14 +1317,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('bomunsa_banya_resting') === '1') {
       const banyaLoc = app.interactables.find(i => i.id === 'banya');
       if (banyaLoc) {
+        locationCard.classList.remove('visible');
+        document.body.classList.add('in-meditation');
+        app.playerPos.copy(banyaLoc.position);
+        app.characterGroup.position.copy(app.playerPos);
         app.activeLocation = banyaLoc;
         app.currentMode = 'inside_banya';
         app.setupDarkTempleInterior();
         if (banyaMessageCard) banyaMessageCard.style.display = 'block';
+        if (banyaMessageText) {
+          banyaMessageText.innerHTML = '모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.';
+        }
+        if (app.updateBanyaPassengers) app.updateBanyaPassengers(0);
+        if (window.templeSync && typeof window.templeSync.fetchBanyaOtherCount === 'function') {
+          window.templeSync.fetchBanyaOtherCount().then((otherCount) => {
+            if (app.currentMode === 'inside_banya' && app.updateBanyaPassengers) {
+              app.updateBanyaPassengers(otherCount);
+              if (banyaMessageText && otherCount > 0) {
+                banyaMessageText.innerHTML = `모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
+              }
+            }
+          });
+        }
         if (banyaSleepBtn) banyaSleepBtn.style.display = 'flex';
         if (meditationMenuToggle) meditationMenuToggle.style.display = 'none';
         templeHeaderGroup.style.display = 'block';
         meditationTitle.textContent = '반야용선 · 피안의 세계';
+        if (meditationSub) meditationSub.style.display = 'none';
         exitBtn.textContent = '도량으로 나가기';
         meditationOverlay.classList.add('active');
         enterBanyaSleepMode();
