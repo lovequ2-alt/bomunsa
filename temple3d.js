@@ -162,16 +162,50 @@ class Bomunsa3D {
   }
 
   getEffectiveHour() {
-    try {
-      const hourParam = new URLSearchParams(window.location.search).get('hour');
-      if (hourParam !== null && hourParam !== '') {
-        const parsed = Number(hourParam);
-        if (!Number.isNaN(parsed) && parsed >= 0 && parsed < 24) {
-          return Math.floor(parsed);
-        }
-      }
-    } catch (e) {}
     return new Date().getHours();
+  }
+
+  getSeasonPalette() {
+    const month = new Date().getMonth() + 1;
+
+    if (month >= 3 && month <= 5) {
+      return {
+        name: 'spring',
+        ground: 0x8ab865,
+        skyDay: 0xa8d8ff,
+        treeColors: [0xff9ec4, 0xffe047, 0xffb7d5],
+        shrub1: 0xff9cc2,
+        shrub2: 0xffe04d
+      };
+    }
+    if (month >= 6 && month <= 8) {
+      return {
+        name: 'summer',
+        ground: 0x4d8042,
+        skyDay: 0x7ec4f8,
+        treeColors: [0x1e5c2a, 0x2a7034, 0x164a20],
+        shrub1: 0x2a6b33,
+        shrub2: 0x3d8242
+      };
+    }
+    if (month >= 9 && month <= 11) {
+      return {
+        name: 'autumn',
+        ground: 0xa38548,
+        skyDay: 0x9bc4e8,
+        treeColors: [0xd93829, 0xf07d24, 0xf2c230],
+        shrub1: 0xd43b2a,
+        shrub2: 0xf0b830
+      };
+    }
+    return {
+      name: 'winter',
+      ground: 0xe4ecf2,
+      skyDay: 0xc4d4e4,
+      treeColors: [0xf5f8fc, 0xe8eff5, 0x62736d],
+      shrub1: 0xf4f8fc,
+      shrub2: 0xdce5ed
+    };
   }
 
   applyTimeOfDayAtmosphere() {
@@ -194,9 +228,11 @@ class Bomunsa3D {
       if (this.ambientLight) this.ambientLight.intensity = 0.15;
       if (this.renderer) this.renderer.toneMappingExposure = 0.86;
     } else {
-      if (this.scene.background) this.scene.background.setHex(0xdcebf5);
+      const season = this.seasonPalette || this.getSeasonPalette();
+      const daySky = season.skyDay || 0xdcebf5;
+      if (this.scene.background) this.scene.background.setHex(daySky);
       if (this.scene.fog) {
-        this.scene.fog.color.setHex(0xdcebf5);
+        this.scene.fog.color.setHex(daySky);
         this.scene.fog.density = 0.012;
       }
       this.sunLight.color.setHex(0xfff3db);
@@ -367,8 +403,15 @@ class Bomunsa3D {
   // [사용자 스케치 1(보문사 지도) 완벽 반영: 구불구불 이어지는 중앙 길과 각 전각 갈래길]
   createMapPathways() {
     const pathGroup = new THREE.Group();
-    const pathwayMat = new THREE.MeshStandardMaterial({ color: 0xd8cbb8, roughness: 0.92 });
-    const borderMat = new THREE.MeshStandardMaterial({ color: 0xb5a895, roughness: 0.95 });
+    const pathwayMat = new THREE.MeshStandardMaterial({
+      color: 0xd8cbb8, roughness: 0.92,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+    });
+    const borderMat = new THREE.MeshStandardMaterial({
+      color: 0xb5a895, roughness: 0.95,
+      polygonOffset: true, polygonOffsetFactor: -0.5, polygonOffsetUnits: -0.5
+    });
+    let pathOrder = 0;
 
     const addPathSegment = (x1, z1, x2, z2, width = 3.6) => {
       const dx = x2 - x1;
@@ -378,11 +421,15 @@ class Bomunsa3D {
       const cz = (z1 + z2) / 2;
       const angle = Math.atan2(dx, dz);
 
-      // 가장자리 석조 경계석 느낌 바닥
+      // 가장자리 석조 경계석 느낌 바닥 (세그먼트별 미세 높이차로 Z-fighting 번쩍거림 완전 제거)
+      pathOrder += 1;
+      const bY = 0.015 + pathOrder * 0.0004;
+      const pY = 0.028 + pathOrder * 0.0004;
+
       const borderMesh = new THREE.Mesh(new THREE.PlaneGeometry(width + 0.45, len + 0.45), borderMat);
       borderMesh.rotation.x = -Math.PI / 2;
       borderMesh.rotation.z = angle;
-      borderMesh.position.set(cx, 0.015, cz);
+      borderMesh.position.set(cx, bY, cz);
       borderMesh.receiveShadow = true;
       pathGroup.add(borderMesh);
 
@@ -390,20 +437,22 @@ class Bomunsa3D {
       const segMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, len + 0.3), pathwayMat);
       segMesh.rotation.x = -Math.PI / 2;
       segMesh.rotation.z = angle;
-      segMesh.position.set(cx, 0.024, cz);
+      segMesh.position.set(cx, pY, cz);
       segMesh.receiveShadow = true;
       pathGroup.add(segMesh);
 
       // 양 끝 둥근 연결 조인트 (갈래길 이음매가 매끄럽게 이어지도록 처리)
-      [[x1, z1], [x2, z2]].forEach(([jx, jz]) => {
+      [[x1, z1], [x2, z2]].forEach(([jx, jz], idx) => {
         const bDisk = new THREE.Mesh(new THREE.CircleGeometry((width + 0.45) / 2, 20), borderMat);
         bDisk.rotation.x = -Math.PI / 2;
-        bDisk.position.set(jx, 0.015, jz);
+        bDisk.position.set(jx, bY + 0.0001 + idx * 0.00005, jz);
+        bDisk.receiveShadow = true;
         pathGroup.add(bDisk);
 
         const pDisk = new THREE.Mesh(new THREE.CircleGeometry(width / 2, 20), pathwayMat);
         pDisk.rotation.x = -Math.PI / 2;
-        pDisk.position.set(jx, 0.024, jz);
+        pDisk.position.set(jx, pY + 0.0001 + idx * 0.00005, jz);
+        pDisk.receiveShadow = true;
         pathGroup.add(pDisk);
       });
     };
@@ -427,10 +476,12 @@ class Bomunsa3D {
     // 2. 좌하단 갈래길 -> 불사중 건물
     addPathSegment(-0.4, 18.2, -14.0, 18.2, 3.2);
 
-    // 3. 우측 갈래길 -> 대웅전 앞마당 -> 우하단 곡선으로 이어지는 지장전 길 (충돌 없이 매끄럽게 연결)
+    // 3. 우측 갈래길 -> 대웅전 앞마당 -> 반야용선 벽화 길 & 우하단 지장전 앞길 (충돌 없이 매끄럽게 연결)
     addPathSegment(1.0, 11.5, 12.0, 11.5, 3.6);
-    addPathSegment(12.0, 11.5, 18.2, 16.6, 3.2);
-    addPathSegment(18.2, 16.6, 25.0, 17.0, 3.2);
+    addPathSegment(12.0, 11.5, 21.4, 10.2, 3.0);
+    addPathSegment(21.4, 10.2, 21.4, 4.5, 3.0);
+    addPathSegment(12.0, 11.5, 19.5, 18.0, 3.4);
+    addPathSegment(19.5, 18.0, 27.5, 20.8, 3.4);
 
     // 4. 좌중단 갈래길 -> 묘보탑
     addPathSegment(-2.2, 1.2, -17.0, 1.2, 3.5);
@@ -446,7 +497,9 @@ class Bomunsa3D {
 
   buildWorld() {
     const groundGeo = new THREE.PlaneGeometry(200, 200, 32, 32);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x728c60, roughness: 0.92, metalness: 0.03 });
+    const season = this.getSeasonPalette();
+    this.seasonPalette = season;
+    const groundMat = new THREE.MeshStandardMaterial({ color: season.ground, roughness: 0.92, metalness: 0.03 });
     this.groundMesh = new THREE.Mesh(groundGeo, groundMat);
     this.groundMesh.rotation.x = -Math.PI / 2;
     this.groundMesh.receiveShadow = true;
@@ -463,7 +516,7 @@ class Bomunsa3D {
     this.createGwanyokAltar(-4.2, 0, 15.6);   // 입구 왼쪽으로 여유 있게 배치하여 석굴암 직행 경로에 걸리지 않도록 조정
     this.createBulsaBuilding(-14, 0, 13.5);  // 좌하단: 불사중 건물
     this.createDaewoongjeon(12, 0, 4.5);     // 우중하단: 대웅전
-    this.createJijangjeon(25, 0, 11.5);      // 대웅전 우하단 연결: 지장전
+    this.createJijangjeon(27.5, 0, 15.0);    // 대웅전 우하단 연결: 지장전 (반야용선 통로를 넓히기 위해 앞·옆으로 이동)
     this.createPagoda(-17, 0, -5.0);         // 좌중상단: 묘보탑 (기존 9층 석탑 그대로 사용)
     this.createBeomjonggak(22.0, 0, -9.5);   // 우중상단(대웅전에 가리지 않게 오른쪽 이동): 범종각
     this.createSansingak(10, 0, -22.0);      // 우상단: 산령각
@@ -1955,6 +2008,25 @@ class Bomunsa3D {
     this.createStoneLantern(x - 3.8, 0, z + 5.2);
     this.createStoneLantern(x + 3.8, 0, z + 5.2);
 
+    // 대웅전 오른쪽 외벽 반야용선(般若龍船) 벽화 (버튼 아래로 온전히 보이도록 낮춰 배치)
+    const muralFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 2.02, 3.96),
+      new THREE.MeshStandardMaterial({ color: 0x5c2e22, roughness: 0.78 })
+    );
+    muralFrame.position.set(5.52, 1.92, 0);
+    daewoong.add(muralFrame);
+
+    if (window.BANYA_MURAL_DATA) {
+      const muralTex = new THREE.TextureLoader().load(window.BANYA_MURAL_DATA);
+      const muralPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.8, 1.88),
+        new THREE.MeshBasicMaterial({ map: muralTex })
+      );
+      muralPlane.rotation.y = Math.PI / 2;
+      muralPlane.position.set(5.57, 1.92, 0);
+      daewoong.add(muralPlane);
+    }
+
     // 대웅전 전체 직사각형 기단/벽체 충돌 박스 등록 (벽 투과 완전 차단)
     this.addBoxObstacle(x - 6.0, x + 6.0, z - 3.9, z + 3.9);
 
@@ -1966,6 +2038,16 @@ class Bomunsa3D {
       lookTarget: new THREE.Vector3(x, 2.2, z),
       enterable: true,
       enterType: 'daewoong'
+    });
+
+    this.registerInteractable({
+      id: 'banya',
+      name: '반야용선',
+      desc: '피안의 세계',
+      position: new THREE.Vector3(x + 11.4, 0, z),
+      lookTarget: new THREE.Vector3(x + 5.57, 3.35, z),
+      enterable: true,
+      enterType: 'banya'
     });
   }
 
@@ -2901,8 +2983,9 @@ class Bomunsa3D {
       group.add(boulder);
     });
 
-    const foliageGreenMat = new THREE.MeshStandardMaterial({ color: 0x3d5432, roughness: 0.88, flatShading: true });
-    const lightShrubMat = new THREE.MeshStandardMaterial({ color: 0x62563c, roughness: 0.90, flatShading: true });
+    const season = this.seasonPalette || this.getSeasonPalette();
+    const foliageGreenMat = new THREE.MeshStandardMaterial({ color: season.shrub1, roughness: 0.88, flatShading: true });
+    const lightShrubMat = new THREE.MeshStandardMaterial({ color: season.shrub2, roughness: 0.90, flatShading: true });
     for (let fx = -4.5; fx <= 4.51; fx += 0.78) {
       const topStone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 0), grottoDomeMat);
       topStone.position.set(fx, roofBaseY + 0.88, depth / 2 + 0.15);
@@ -3808,8 +3891,9 @@ class Bomunsa3D {
     });
 
     // 지붕 위 자연 바위와 낮게 깔린 수풀 (위쪽 하늘 배경은 시원하게 열려 있음)
-    const roofShrubMat1 = new THREE.MeshStandardMaterial({ color: 0x5c6840, roughness: 0.88, flatShading: true });
-    const roofShrubMat2 = new THREE.MeshStandardMaterial({ color: 0x736446, roughness: 0.90, flatShading: true });
+    const season = this.seasonPalette || this.getSeasonPalette();
+    const roofShrubMat1 = new THREE.MeshStandardMaterial({ color: season.shrub1, roughness: 0.88, flatShading: true });
+    const roofShrubMat2 = new THREE.MeshStandardMaterial({ color: season.shrub2, roughness: 0.90, flatShading: true });
     for (let sx = -4.6; sx <= 4.61; sx += 0.72) {
       const topStone = new THREE.Mesh(
         new THREE.DodecahedronGeometry(0.28 + (Math.abs(Math.sin(sx * 2.1)) * 0.14), 0),
@@ -4241,11 +4325,194 @@ class Bomunsa3D {
     this.insideGroup.add(this.jijangGroup);
 
     // ==========================================
+    // [피안의 세계] 반야용선(般若龍船) 내부 공간 (벽화 속 바다 + 2D 고정 동반 탑승자들 + 내 3D 캐릭터만 안착)
+    // ==========================================
+    this.banyaGroup = new THREE.Group();
+    this.banyaGroup.visible = false;
+
+    // 전통 벽화 느낌의 곡선 파도가 일렁이는 피안의 바다
+    const seaCanvas = document.createElement('canvas');
+    seaCanvas.width = 512;
+    seaCanvas.height = 512;
+    const sCtx = seaCanvas.getContext('2d');
+    sCtx.fillStyle = '#2d536c';
+    sCtx.fillRect(0, 0, 512, 512);
+    for (let row = 0; row < 16; row++) {
+      const baseY = row * 32 + 18;
+      sCtx.strokeStyle = row % 2 === 0 ? 'rgba(225, 238, 246, 0.34)' : 'rgba(165, 202, 224, 0.25)';
+      sCtx.lineWidth = 2.4;
+      sCtx.beginPath();
+      for (let x = 0; x <= 512; x += 64) {
+        sCtx.moveTo(x, baseY);
+        sCtx.quadraticCurveTo(x + 16, baseY - 14, x + 32, baseY - 2);
+        sCtx.quadraticCurveTo(x + 48, baseY + 10, x + 64, baseY);
+      }
+      sCtx.stroke();
+      // 잔물결 거품 곡선 포인트
+      sCtx.strokeStyle = 'rgba(242, 248, 252, 0.22)';
+      sCtx.lineWidth = 1.6;
+      sCtx.beginPath();
+      for (let x = 12; x < 512; x += 128) {
+        sCtx.arc(x + 20, baseY - 6, 8, Math.PI * 0.9, Math.PI * 1.9);
+      }
+      sCtx.stroke();
+    }
+    const seaTex = new THREE.CanvasTexture(seaCanvas);
+    seaTex.wrapS = THREE.RepeatWrapping;
+    seaTex.wrapT = THREE.RepeatWrapping;
+    seaTex.repeat.set(14, 14);
+    this.banyaSeaTex = seaTex;
+    const seaMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, 110),
+      new THREE.MeshStandardMaterial({ map: seaTex, color: 0x3b6782, roughness: 0.65 })
+    );
+    seaMesh.rotation.x = -Math.PI / 2;
+    seaMesh.position.set(0, -0.35, -10);
+    this.banyaGroup.add(seaMesh);
+
+    // 원경의 반야용선 벽화 배경 (벽화 속으로 들어온 분위기 연출)
+    if (window.BANYA_MURAL_DATA) {
+      const banyaBgTex = texLoader.load(window.BANYA_MURAL_DATA);
+      const banyaBg = new THREE.Mesh(
+        new THREE.PlaneGeometry(18, 9),
+        new THREE.MeshBasicMaterial({ map: banyaBgTex, transparent: true, opacity: 0.38 })
+      );
+      banyaBg.position.set(0, 4.1, -17.5);
+      this.banyaGroup.add(banyaBg);
+    }
+
+    // 반야용선 배 본체 및 누각 (내 캐릭터가 조용히 올라가 앉을 자리 포함)
+    this.banyaBoatGroup = new THREE.Group();
+    this.banyaBoatGroup.position.set(0, 0, -5.2);
+
+    // 나무 판자 선체 질감 (반야용선 벽화의 나뭇결 판자 배 느낌)
+    const woodCanvas = document.createElement('canvas');
+    woodCanvas.width = 256;
+    woodCanvas.height = 128;
+    const wCtx = woodCanvas.getContext('2d');
+    wCtx.fillStyle = '#8b4d2e';
+    wCtx.fillRect(0, 0, 256, 128);
+    wCtx.strokeStyle = 'rgba(46, 20, 10, 0.45)';
+    wCtx.lineWidth = 2;
+    for (let py = 16; py < 128; py += 16) {
+      wCtx.beginPath();
+      wCtx.moveTo(0, py);
+      wCtx.lineTo(256, py);
+      wCtx.stroke();
+    }
+    wCtx.strokeStyle = 'rgba(165, 105, 65, 0.28)';
+    wCtx.lineWidth = 1;
+    for (let g = 0; g < 60; g++) {
+      const gy = Math.random() * 128;
+      wCtx.beginPath();
+      wCtx.moveTo(0, gy);
+      wCtx.bezierCurveTo(85, gy + (Math.random() - 0.5) * 6, 170, gy + (Math.random() - 0.5) * 6, 256, gy);
+      wCtx.stroke();
+    }
+    const boatWoodTex = new THREE.CanvasTexture(woodCanvas);
+    boatWoodTex.wrapS = THREE.RepeatWrapping;
+    boatWoodTex.wrapT = THREE.RepeatWrapping;
+    boatWoodTex.repeat.set(3, 1);
+
+    const boatWoodMat = new THREE.MeshStandardMaterial({ map: boatWoodTex, color: 0xb97d56, roughness: 0.78 });
+    const boatTrimMat = new THREE.MeshStandardMaterial({ color: 0x612f1e, roughness: 0.78 });
+    const boatTileMat = new THREE.MeshStandardMaterial({ color: 0x3b4452, roughness: 0.75 });
+
+    const hullBase = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.58, 2.3), boatWoodMat);
+    hullBase.position.set(0, -0.18, 0);
+    this.banyaBoatGroup.add(hullBase);
+
+    // 목조 난간 (앞뒤 갑판 테두리)
+    [0.96, -0.96].forEach((rz) => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.14, 0.08), boatTrimMat);
+      rail.position.set(0, 0.22, rz);
+      this.banyaBoatGroup.add(rail);
+    });
+
+    // 용선 뱃머리(좌측)와 선미(우측) 곡선 장식
+    const prow = new THREE.Mesh(new THREE.ConeGeometry(0.95, 2.2, 6), boatWoodMat);
+    prow.rotation.z = Math.PI / 2.4;
+    prow.position.set(-3.9, 0.35, 0);
+    this.banyaBoatGroup.add(prow);
+
+    const stern = new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.9, 6), boatWoodMat);
+    stern.rotation.z = -Math.PI / 2.4;
+    stern.position.set(3.8, 0.30, 0);
+    this.banyaBoatGroup.add(stern);
+
+    // 배 위 목조 누각 지붕 & 가늘고 개수가 늘어난 기둥 (중앙 캐릭터 시야를 가리지 않도록 좌우 대칭 배치)
+    [-2.5, -1.5, -0.55, 0.55, 1.5, 2.5].forEach((px) => {
+      [-0.88, 0.88].forEach((pz) => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.046, 2.40, 10), boatTrimMat);
+        col.position.set(px, 1.28, pz);
+        this.banyaBoatGroup.add(col);
+      });
+    });
+    const eavesBeam = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.12, 1.95), boatTrimMat);
+    eavesBeam.position.set(0, 2.42, 0);
+    this.banyaBoatGroup.add(eavesBeam);
+    const pavilionRoof = new THREE.Mesh(new THREE.ConeGeometry(4.0, 1.05, 4), boatTileMat);
+    pavilionRoof.rotation.y = Math.PI / 4;
+    pavilionRoof.scale.set(1.30, 1.0, 0.65);
+    pavilionRoof.position.set(0, 2.94, 0);
+    this.banyaBoatGroup.add(pavilionRoof);
+
+    // [사용자 요청 반영] 실제 마음을 내려놓은 다른 불자들만 내 캐릭터와 같은 2D 앉은 모습(단일 스프라이트 텍스처 공유)으로 표시
+    const spriteCanvas = document.createElement('canvas');
+    spriteCanvas.width = 128;
+    spriteCanvas.height = 144;
+    const spCtx = spriteCanvas.getContext('2d');
+    // 네모난 작은 좌복(방석)
+    spCtx.fillStyle = '#c89b3c';
+    spCtx.fillRect(30, 114, 68, 12);
+    spCtx.fillStyle = '#b43b32';
+    spCtx.fillRect(33, 110, 62, 10);
+    // 둥근 승복 하단(무릎) & 회색 승복 몸통 (내 캐릭터와 동일한 톤)
+    spCtx.fillStyle = '#a2a7ae';
+    spCtx.beginPath();
+    spCtx.ellipse(64, 102, 26, 16, 0, 0, Math.PI * 2);
+    spCtx.fill();
+    spCtx.fillStyle = '#cfd3d8';
+    spCtx.beginPath();
+    spCtx.roundRect(42, 66, 44, 42, 18);
+    spCtx.fill();
+    // 양쪽 작은 귀 & 둥근 머리 (내 캐릭터와 같은 크림 아이보리 피부톤)
+    spCtx.fillStyle = '#eed0ba';
+    spCtx.beginPath();
+    spCtx.arc(41, 46, 5, 0, Math.PI * 2);
+    spCtx.arc(87, 46, 5, 0, Math.PI * 2);
+    spCtx.fill();
+    spCtx.fillStyle = '#f5dfd0';
+    spCtx.beginPath();
+    spCtx.arc(64, 44, 21, 0, Math.PI * 2);
+    spCtx.fill();
+    const pilgrim2DTex = new THREE.CanvasTexture(spriteCanvas);
+    const pilgrim2DMat = new THREE.SpriteMaterial({ map: pilgrim2DTex, transparent: true });
+
+    this.banyaPassengerSprites = [];
+    [
+      [-1.75, 0.36, -0.45], [-1.15, 0.36, -0.52], [-0.58, 0.36, -0.56],
+      [0.58, 0.36, -0.56], [1.15, 0.36, -0.52], [1.75, 0.36, -0.45],
+      [-1.45, 0.36, 0.22], [1.45, 0.36, 0.22]
+    ].forEach(([sx, sy, sz]) => {
+      const sp = new THREE.Sprite(pilgrim2DMat);
+      sp.position.set(sx, sy, sz);
+      sp.scale.set(0.56, 0.64, 1);
+      sp.visible = false; // 실제 탑승자 수만큼만 표시
+      this.banyaBoatGroup.add(sp);
+      this.banyaPassengerSprites.push(sp);
+    });
+
+    this.banyaGroup.add(this.banyaBoatGroup);
+    this.insideGroup.add(this.banyaGroup);
+
+    // ==========================================
     // [공통 전경] 네모난 작은 좌복(방석)과 그 위에 단정히 앉은 귀여운 동자승 참배 캐릭터
     // ==========================================
     const cushionGroup = this.createRectCushionMesh();
     cushionGroup.position.set(0, 0, -4.9);
     this.insideGroup.add(cushionGroup);
+    this.insideCushionGroup = cushionGroup;
 
     this.insideMonkGroup = new THREE.Group();
     this.insideMonkGroup.visible = true;
@@ -4747,20 +5014,23 @@ class Bomunsa3D {
       [27, 0], [28, -14], [24, -25],
       [-15, -29], [3, -30], [18, -29]
     ];
-    pineTreeLocations.forEach(([px, pz]) => {
-      this.createPineTree(px, 0, pz);
+    pineTreeLocations.forEach(([px, pz], idx) => {
+      this.createPineTree(px, 0, pz, idx);
       this.addObstacle(px, pz, 0.5);
     });
   }
 
-  createPineTree(x, y, z) {
+  createPineTree(x, y, z, treeIdx = 0) {
     const group = new THREE.Group();
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.38, 3.8, 7), new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.95 }));
     trunk.position.y = 1.9;
     trunk.rotation.z = (Math.random() - 0.5) * 0.25;
     group.add(trunk);
 
-    const foliageMat = new THREE.MeshStandardMaterial({ color: 0x24422b, roughness: 0.85, flatShading: true });
+    const season = this.seasonPalette || this.getSeasonPalette();
+    const treeColors = season.treeColors;
+    const pickedColor = treeColors[treeIdx % treeColors.length];
+    const foliageMat = new THREE.MeshStandardMaterial({ color: pickedColor, roughness: 0.85, flatShading: true });
     [{ r: 2.2, h: 1.4, y: 3.2 }, { r: 1.7, h: 1.2, y: 4.2 }, { r: 1.1, h: 1.0, y: 5.0 }].forEach(f => {
       const fol = new THREE.Mesh(new THREE.ConeGeometry(f.r, f.h, 7), foliageMat);
       fol.position.y = f.y;
@@ -5040,7 +5310,8 @@ class Bomunsa3D {
       gwanyok: new THREE.Vector3(0, 0, 17.5),
       bulsa: new THREE.Vector3(-0.4, 0, 18.2),
       daewoong: new THREE.Vector3(1.0, 0, 11.5),
-      jijang: new THREE.Vector3(12.0, 0, 11.5),
+      banya: new THREE.Vector3(21.4, 0, 10.2),
+      jijang: new THREE.Vector3(19.5, 0, 18.0),
       pagoda: new THREE.Vector3(-2.2, 0, 1.2),
       beomjong: new THREE.Vector3(-0.5, 0, -4.2),
       sansin: new THREE.Vector3(-3.2, 0, -11.5),
@@ -5054,24 +5325,41 @@ class Bomunsa3D {
       this.walkWaypoints.push(new THREE.Vector3(0.8, 0, Math.max(17.2, this.playerPos.z)));
     }
 
+    const isRightSideCluster = ['daewoong', 'banya', 'jijang'].includes(locationId);
+
     // 대문(z = 30.0) 바깥에서 경내 전각으로 들어갈 때는 반드시 대문 중앙 통로를 거쳐 입장
     if (this.playerPos.z > 29.4 && locationId !== 'hojimun') {
       this.walkWaypoints.push(new THREE.Vector3(0, 0, 31.8));
       this.walkWaypoints.push(new THREE.Vector3(0, 0, 28.0));
     } else if (locationId === 'pagoda' && this.playerPos.x < -4.5 && this.playerPos.z >= -1.0 && this.playerPos.z <= 8.0) {
       // 이미 탑전 앞마당(남쪽) 영역에 있으면 중앙 길로 되돌아가지 않고 곧장 탑전 동그라미 표식으로 이동
-    } else if (Math.abs(this.playerPos.x) > 4.5) {
-      // 현재 위치가 중앙 산책로에서 벗어나 있으면 가까운 중앙 길로 먼저 복귀
-      if (this.playerPos.x > 16 && this.playerPos.z > 8) {
-        if (locationId === 'jijang') {
-          this.walkWaypoints.push(new THREE.Vector3(18.2, 0, 16.6));
-        } else {
-          // 지장전 근처에 있을 때는 지장전 앞길 우회 후 대웅전 앞마당 경유
-          this.walkWaypoints.push(new THREE.Vector3(18.2, 0, 16.6));
-          this.walkWaypoints.push(new THREE.Vector3(12.0, 0, 11.5));
-          const nearSpineZ = Math.max(-12, Math.min(24, this.playerPos.z));
-          this.walkWaypoints.push(new THREE.Vector3(0, 0, nearSpineZ));
+    } else if (this.playerPos.x >= 5.0 && isRightSideCluster) {
+      // [사용자 요청 반영] 우측 구역(대웅전·반야용선·지장전) 내부 이동 시 왼쪽(x=0)으로 돌아가지 않고 바로 연결 통로로 이동
+      if (locationId === 'banya') {
+        if (this.playerPos.z > 9.5) {
+          this.walkWaypoints.push(new THREE.Vector3(21.4, 0, 10.2));
         }
+      } else if (locationId === 'daewoong') {
+        if (this.playerPos.x > 18.0 && this.playerPos.z < 9.5) {
+          this.walkWaypoints.push(new THREE.Vector3(20.6, 0, 10.2));
+        }
+        this.walkWaypoints.push(new THREE.Vector3(12.0, 0, 11.5));
+      } else if (locationId === 'jijang') {
+        if (this.playerPos.z < 11.0 && this.playerPos.x > 18.0) {
+          this.walkWaypoints.push(new THREE.Vector3(20.6, 0, 10.5));
+        }
+        this.walkWaypoints.push(new THREE.Vector3(19.5, 0, 18.0));
+      }
+    } else if (Math.abs(this.playerPos.x) > 4.5) {
+      // 현재 위치가 반대편/멀리 떨어진 전각이면 대웅전·지장전을 피해 중앙 길로 복귀
+      if (this.playerPos.x > 16 && this.playerPos.z > 10) {
+        this.walkWaypoints.push(new THREE.Vector3(19.5, 0, 18.0));
+        this.walkWaypoints.push(new THREE.Vector3(12.0, 0, 11.5));
+        this.walkWaypoints.push(new THREE.Vector3(0, 0, 11.5));
+      } else if (this.playerPos.x > 18 && this.playerPos.z <= 10) {
+        this.walkWaypoints.push(new THREE.Vector3(20.6, 0, 10.2));
+        this.walkWaypoints.push(new THREE.Vector3(12.0, 0, 11.5));
+        this.walkWaypoints.push(new THREE.Vector3(0, 0, 11.5));
       } else {
         const nearSpineZ = Math.max(-12, Math.min(24, this.playerPos.z));
         this.walkWaypoints.push(new THREE.Vector3(0, 0, nearSpineZ));
@@ -5080,17 +5368,21 @@ class Bomunsa3D {
 
     // 목적지 갈림길 분기점 경유
     if (locationId === 'jijang') {
-      if (!(this.playerPos.x > 16 && this.playerPos.z > 8)) {
-        if (this.playerPos.x < 10.0) {
-          this.walkWaypoints.push(new THREE.Vector3(1.0, 0, 11.5));
-        }
+      if (this.playerPos.x < 5.0) {
+        this.walkWaypoints.push(new THREE.Vector3(1.0, 0, 11.5));
         this.walkWaypoints.push(new THREE.Vector3(12.0, 0, 11.5));
-        this.walkWaypoints.push(new THREE.Vector3(18.2, 0, 16.6));
+        this.walkWaypoints.push(new THREE.Vector3(19.5, 0, 18.0));
+      }
+    } else if (locationId === 'banya') {
+      if (this.playerPos.x < 5.0) {
+        this.walkWaypoints.push(new THREE.Vector3(1.0, 0, 11.5));
+        this.walkWaypoints.push(new THREE.Vector3(12.0, 0, 11.5));
+        this.walkWaypoints.push(new THREE.Vector3(21.4, 0, 10.2));
       }
     } else if (locationId === 'hojimun' && this.playerPos.z < 29.8) {
       this.walkWaypoints.push(new THREE.Vector3(0, 0, 28.0));
       this.walkWaypoints.push(new THREE.Vector3(0, 0, 31.8));
-    } else if (junctionMap[locationId] && !(locationId === 'pagoda' && this.playerPos.x < -4.5 && this.playerPos.z >= -1.0 && this.playerPos.z <= 8.0)) {
+    } else if (junctionMap[locationId] && !(this.playerPos.x >= 5.0 && isRightSideCluster) && !(locationId === 'pagoda' && this.playerPos.x < -4.5 && this.playerPos.z >= -1.0 && this.playerPos.z <= 8.0)) {
       this.walkWaypoints.push(junctionMap[locationId].clone());
     }
 
@@ -5353,6 +5645,8 @@ class Bomunsa3D {
         this.currentMode = 'inside_seokguram';
       } else if (this.activeLocation.enterType === 'sansin') {
         this.currentMode = 'inside_sansin';
+      } else if (this.activeLocation.enterType === 'banya') {
+        this.currentMode = 'inside_banya';
       }
       this.setupDarkTempleInterior();
     }
@@ -5445,6 +5739,17 @@ class Bomunsa3D {
       this.applyTimeOfDayAtmosphere();
       if (this.sunLight) this.sunLight.castShadow = false;
       this.insideCandleLight.intensity = 0.25;
+    } else if (enterType === 'banya') {
+      if (this.insideFloorMesh) this.insideFloorMesh.visible = false;
+      if (this.cosmicDust) this.cosmicDust.visible = false;
+      this.scene.background.setHex(0x1f2d40);
+      this.scene.fog.color.setHex(0x1f2d40);
+      this.scene.fog.density = 0.015;
+      this.sunLight.intensity = 0.85;
+      this.hemiLight.intensity = 0.75;
+      if (this.ambientLight) this.ambientLight.intensity = 0.5;
+      if (this.renderer) this.renderer.toneMappingExposure = 1.05;
+      this.insideCandleLight.intensity = 0.1;
     } else {
       if (this.insideFloorMesh) this.insideFloorMesh.visible = true;
       if (this.cosmicDust) this.cosmicDust.visible = true;
@@ -5464,6 +5769,14 @@ class Bomunsa3D {
     if (this.daewoongGroup) this.daewoongGroup.visible = (enterType === 'daewoong');
     if (this.jijangGroup) this.jijangGroup.visible = (enterType === 'jijang');
     if (this.sansinGroup) this.sansinGroup.visible = (enterType === 'sansin');
+    if (this.banyaGroup) this.banyaGroup.visible = (enterType === 'banya');
+
+    if (this.insideCushionGroup) {
+      this.insideCushionGroup.position.set(0, enterType === 'banya' ? 0.10 : 0, -4.9);
+    }
+    if (this.insideMonkGroup) {
+      this.insideMonkGroup.position.set(0, enterType === 'banya' ? 0.122 : 0.022, -4.9);
+    }
 
     if (this.insideGroup) this.insideGroup.visible = true;
     if (this.characterGroup) this.characterGroup.visible = false;
@@ -5512,6 +5825,9 @@ class Bomunsa3D {
     this.insideCandleLight.intensity = 0;
 
     if (this.insideGroup) this.insideGroup.visible = false;
+    if (this.banyaGroup) this.banyaGroup.visible = false;
+    if (this.insideCushionGroup) this.insideCushionGroup.position.set(0, 0, -4.9);
+    if (this.insideMonkGroup) this.insideMonkGroup.position.set(0, 0.022, -4.9);
     if (this.remoteInsideGroup) this.remoteInsideGroup.visible = false;
     if (this.characterGroup) this.characterGroup.visible = true;
     if (window.templeSync) {
@@ -5538,7 +5854,26 @@ class Bomunsa3D {
     }
   }
 
+  updateBanyaPassengers(otherCount = 0) {
+    if (!this.banyaPassengerSprites) return;
+    const count = Math.max(0, Math.min(otherCount, this.banyaPassengerSprites.length));
+    for (let i = 0; i < this.banyaPassengerSprites.length; i++) {
+      this.banyaPassengerSprites[i].visible = (i < count);
+    }
+  }
+
+  setSleepMode(sleeping) {
+    const next = Boolean(sleeping);
+    if (this.isSleeping === next) return;
+    this.isSleeping = next;
+    if (!this.isSleeping) {
+      this.clock.getDelta();
+      this.animate();
+    }
+  }
+
   animate() {
+    if (this.isSleeping) return;
     requestAnimationFrame(() => this.animate());
     const delta = Math.min(this.clock.getDelta(), 0.1);
 
@@ -5980,6 +6315,27 @@ class Bomunsa3D {
             }
           });
         });
+      }
+
+      // 반야용선 피안의 바다: 잔잔하게 일렁이는 파도와 배의 부드러운 흔들림
+      if (this.currentMode === 'inside_banya') {
+        const t = performance.now() * 0.001;
+        if (this.banyaSeaTex) {
+          this.banyaSeaTex.offset.x = (t * 0.035) % 1;
+          this.banyaSeaTex.offset.y = Math.sin(t * 0.45) * 0.04;
+        }
+        const waveBob = Math.sin(t * 1.15) * 0.045;
+        const waveRoll = Math.sin(t * 0.75) * 0.014;
+        if (this.banyaBoatGroup) {
+          this.banyaBoatGroup.position.y = waveBob;
+          this.banyaBoatGroup.rotation.z = waveRoll;
+        }
+        if (this.insideCushionGroup) {
+          this.insideCushionGroup.position.y = 0.10 + waveBob;
+        }
+        if (this.insideMonkGroup) {
+          this.insideMonkGroup.position.y = 0.122 + waveBob;
+        }
       }
     }
 

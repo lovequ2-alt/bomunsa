@@ -73,3 +73,28 @@ begin
   return new_count;
 end;
 $$;
+
+-- 5. 반야용선 실제 탑승자(마음을 내려놓은 불자) 테이블
+create table if not exists public.banya_passengers (
+  owner_id text primary key,
+  boarded_at timestamptz not null default now()
+);
+
+alter table public.banya_passengers enable row level security;
+
+create policy "Anyone can read banya_passengers"
+  on public.banya_passengers for select
+  using (true);
+
+create policy "Anyone can insert banya_passengers"
+  on public.banya_passengers for insert
+  with check (true);
+
+create policy "Anyone can update banya_passengers"
+  on public.banya_passengers for update
+  using (true)
+  with check (true);
+
+create policy "Anyone can delete banya_passengers"
+  on public.banya_passengers for delete
+  using (true);

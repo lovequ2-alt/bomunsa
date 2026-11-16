@@ -151,6 +151,11 @@
       <span id="chant-status-text">천수경 독송 중...</span>
     </div>
 
+    <!-- [반야용선 피안의 세계 안내 카드] -->
+    <div id="banya-message-card" class="banya-message-card" style="display: none;">
+      <p id="banya-message-text">모든 번잡함을 반야용선에 실어 보내고 고요한 부처로 돌아갑니다.</p>
+    </div>
+
     <!-- [사용자 요청 반영: 평소에는 '참배 · 수행하기'와 '마당으로' 2개만 단정히 두고, 누르면 차분한 수행 메뉴가 펼쳐짐] -->
     <div id="meditation-menu-box" class="meditation-menu-box">
       <div id="meditation-drawer" class="meditation-drawer">
@@ -186,6 +191,9 @@
       <div class="meditation-footer-bar">
         <button id="meditation-menu-toggle" class="control-grid-btn menu-toggle-btn" type="button">
           <span id="meditation-menu-toggle-text">🙏 참배 · 수행하기</span>
+        </button>
+        <button id="banya-sleep-btn" class="control-grid-btn banya-sleep-btn" style="display: none;" type="button">
+          <span>🌅 마음은 내려놓고 현실로</span>
         </button>
         <button id="exit-btn" class="exit-btn">
           마당으로
@@ -233,8 +241,8 @@
           <p><a href="https://gongu.copyright.or.kr/" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (CC BY 4.0)</p>
         </div>
         <div class="credit-item">
-          <strong>천수경 독송</strong>
-          <p>무료 공개 음원</p>
+          <strong>천수경 · 관음경 · 지장보살 정근 · 산왕대신 정근</strong>
+          <p>사찰 스님 허락 · 공개 독송·정근 음원</p>
         </div>
       </div>
       <div class="prayer-modal-actions">
@@ -263,13 +271,25 @@
     <button class="nav-pill" data-id="sansin">🌲 산령각</button>
     <button class="nav-pill" data-id="beomjong">🔔 범종</button>
     <button class="nav-pill" data-id="jijang"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 지장전</button>
+    <button class="nav-pill" data-id="banya">⛵ 반야용선</button>
     <button class="nav-pill" data-id="bulsa">🪵 불사중 건물</button>
   </nav>
+
+  <!-- 반야용선 현실 복귀(수면 모드) 오버레이 -->
+  <div id="banya-sleep-overlay" class="banya-sleep-overlay" style="display: none;">
+    <div class="banya-sleep-box">
+      <div class="banya-sleep-icon">🌅</div>
+      <h2>피안의 세계 · 반야용선</h2>
+      <p>모든 번잡함을 반야용선에 실어 보내고 고요한 부처로 돌아갑니다.<br>이제 핸드폰에서 수면모드로 언제나 당신 옆에 있습니다.</p>
+      <button id="banya-wake-btn" class="banya-wake-btn" type="button">🚶 나를 데리고 도량으로 나가기</button>
+    </div>
+  </div>
 
   <!-- 스크립트 연결 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="sync.js?v=20261114i"></script>
   <script src="audio.js"></script>
+  <script src="banya_asset.js"></script>
   <script src="daewoong_asset.js"></script>
   <script src="jijang_asset.js"></script>
   <script src="sansin_asset.js"></script>

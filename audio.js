@@ -157,8 +157,8 @@ class TempleAudio {
         ]
       },
       daewoong: {
-        title: '반야심경',
-        file: '반야심경.mp3',
+        title: '관음경',
+        file: '관음경.mp3',
         lines: [
           '마하반야바라밀다심경.',
           '관자재보살 행심반야바라밀다시 조견오온개공 도일체고액.',
@@ -177,8 +177,8 @@ class TempleAudio {
         ]
       },
       jijang: {
-        title: '멸업장진언',
-        file: '멸업장진언.mp3',
+        title: '지장보살 정근',
+        file: '지장보살정근.mp3',
         lines: [
           '지장보살 멸업장진언.',
           '나무 대원본존 지장보살 마하살.',
@@ -192,8 +192,8 @@ class TempleAudio {
         ]
       },
       sansin: {
-        title: '화엄경 약찬게',
-        file: '화엄경_약찬게.mp3',
+        title: '산왕대신 정근',
+        file: '산왕대신정진.mp3',
         lines: [
           '대방광불 화엄경, 용수보살 약찬게.',
           '나무 화장세계 해회불보살.',
@@ -280,7 +280,7 @@ class TempleAudio {
     if (data.file) {
       try {
         const audio = new Audio(data.file);
-        audio.volume = 0.72;
+        audio.volume = 1.0;
         audio.muted = this.isMuted;
         audio.onended = () => {
           if (!this.isChanting || sessionId !== this.chantSessionId) return;
@@ -880,6 +880,25 @@ class TempleAudio {
   resumeBirdChirp() {
     if (this.isAmbientPlaying && !this.birdTimeout) {
       this.scheduleNextBirdChirp();
+    }
+  }
+
+  // [반야용선 수면 모드: 새소리·배경음·독송 등 모든 소리를 완전히 멈추고 오디오 컨텍스트 일시 정지]
+  enterSleepMode() {
+    this.pauseBirdChirp();
+    this.stopChant();
+    this.stopSpeech();
+    this.stopMoktakLoop();
+    this.stopYoryeongLoop();
+    this.stopWindChimeLoop();
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
+    }
+  }
+
+  exitSleepMode() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
     }
   }
 

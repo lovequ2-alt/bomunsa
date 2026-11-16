@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let bellMsgTimer = null;
   const gwanyokLadleBtn = document.getElementById('gwanyok-ladle-btn');
   const gwanyokLadleBadge = document.getElementById('gwanyok-ladle-badge');
+  const banyaMessageCard = document.getElementById('banya-message-card');
+  const banyaMessageText = document.getElementById('banya-message-text');
+  const banyaSleepBtn = document.getElementById('banya-sleep-btn');
+  const banyaSleepOverlay = document.getElementById('banya-sleep-overlay');
+  const banyaWakeBtn = document.getElementById('banya-wake-btn');
   let gwanyokNextStep = 1;
   let gwanyokSessionStarted = false;
   let gwanyokResetTimer = null;
@@ -496,6 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
       bellMsgTimer = null;
     }
     document.body.classList.toggle('at-gwanyok', Boolean(loc && loc.id === 'gwanyok'));
+    document.body.classList.toggle('at-banya', Boolean(loc && loc.id === 'banya'));
     if (!loc) {
       lastSpokenLocId = null;
       gwanyokNextStep = 1;
@@ -571,6 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
           enterBtn.innerHTML = '<span>💧</span> 아기 부처님 관욕식 올리기';
         } else if (loc.id === 'seokguram') {
           enterBtn.innerHTML = '<span>🙏</span> 기도하기';
+        } else if (loc.id === 'banya') {
+          enterBtn.innerHTML = '<span>⛵</span> 반야용선타기';
         } else {
           enterBtn.innerHTML = '<span>🚪</span> 전각 안으로 입장하기';
         }
@@ -820,7 +828,35 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    if (currentLoc.id === 'pagoda') {
+    if (currentLoc.id === 'banya') {
+      if (meditationMenuToggle) meditationMenuToggle.style.display = 'none';
+      setDrawerOpen(false);
+      templeHeaderGroup.style.display = 'block';
+      meditationTitle.textContent = '반야용선 · 피안의 세계';
+      if (meditationSub) meditationSub.style.display = 'none';
+      pagodaCounterCard.classList.remove('visible');
+      activePrayerBadge.classList.remove('visible');
+      breathContainer.style.display = 'none';
+      if (chantBtn) chantBtn.style.display = 'none';
+      if (chantStatusCard) chantStatusCard.style.display = 'none';
+      if (banyaMessageCard) banyaMessageCard.style.display = 'block';
+      if (banyaMessageText) {
+        banyaMessageText.innerHTML = '모든 번잡함을 반야용선에 실어 보내고 고요한 부처로 돌아갑니다.';
+      }
+      if (app.updateBanyaPassengers) app.updateBanyaPassengers(0);
+      if (window.templeSync && typeof window.templeSync.fetchBanyaOtherCount === 'function') {
+        window.templeSync.fetchBanyaOtherCount().then((otherCount) => {
+          if (app.currentMode === 'inside_banya' && app.updateBanyaPassengers) {
+            app.updateBanyaPassengers(otherCount);
+            if (banyaMessageText && otherCount > 0) {
+              banyaMessageText.innerHTML = `모든 번잡함을 반야용선에 실어 보내고 고요한 부처로 돌아갑니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
+            }
+          }
+        });
+      }
+      if (banyaSleepBtn) banyaSleepBtn.style.display = 'flex';
+      exitBtn.textContent = '도량으로 나가기';
+    } else if (currentLoc.id === 'pagoda') {
       // [요청 반영] 탑돌이 시: 상단 중복 제목 숨기고 전용 탑돌이 카드만 1번 깔끔하게 표시!
       if (meditationMenuToggle) meditationMenuToggle.style.display = 'none';
       setDrawerOpen(true);
@@ -852,6 +888,9 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     } else {
       // 전각 내부 법당 모드: 평소에는 '참배 · 수행하기'와 '마당으로'만 단정히 표시
+      if (banyaMessageCard) banyaMessageCard.style.display = 'none';
+      if (banyaSleepBtn) banyaSleepBtn.style.display = 'none';
+      exitBtn.textContent = '마당으로';
       if (meditationMenuToggle) meditationMenuToggle.style.display = 'flex';
       setDrawerOpen(false);
       templeHeaderGroup.style.display = 'block';
@@ -872,7 +911,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (meditationBtnText) meditationBtnText.textContent = '호흡 명상';
 
       const HALL_CHANT_LABELS = {
-        seokguram: '천수경'
+        seokguram: '천수경',
+        daewoong: '관음경',
+        jijang: '지장보살 정근',
+        sansin: '산왕대신 정근'
       };
       const chantLabel = HALL_CHANT_LABELS[currentLoc.id];
       if (chantBtn && chantText) {
@@ -1103,6 +1145,11 @@ document.addEventListener('DOMContentLoaded', () => {
     meditationOverlay.classList.remove('active');
     pagodaCounterCard.classList.remove('visible');
     activePrayerBadge.classList.remove('visible');
+    if (banyaMessageCard) banyaMessageCard.style.display = 'none';
+    if (banyaSleepBtn) banyaSleepBtn.style.display = 'none';
+    exitBtn.textContent = '마당으로';
+    try { localStorage.removeItem('bomunsa_banya_resting'); } catch (e) {}
+    window.templeSync?.setBanyaBoarding(false);
     bowStatusCard.style.display = 'none';
     bowBtn.classList.remove('active');
     bowBtn.style.gridColumn = '';
@@ -1236,6 +1283,62 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  const enterBanyaSleepMode = () => {
+    try { localStorage.setItem('bomunsa_banya_resting', '1'); } catch (e) {}
+    window.templeSync?.setBanyaBoarding(true);
+    window.templeAudio?.enterSleepMode();
+    if (app.setSleepMode) app.setSleepMode(true);
+    if (banyaSleepOverlay) banyaSleepOverlay.style.display = 'flex';
+  };
+
+  const wakeFromBanyaSleep = () => {
+    try { localStorage.removeItem('bomunsa_banya_resting'); } catch (e) {}
+    window.templeSync?.setBanyaBoarding(false);
+    if (banyaSleepOverlay) banyaSleepOverlay.style.display = 'none';
+    if (app.setSleepMode) app.setSleepMode(false);
+    window.templeAudio?.exitSleepMode();
+
+    const banyaLoc = app.interactables.find(i => i.id === 'banya');
+    if (banyaLoc) {
+      app.playerPos.copy(banyaLoc.position);
+      app.characterGroup.position.copy(app.playerPos);
+      app.activeLocation = banyaLoc;
+    }
+    if (app.currentMode === 'inside_banya') {
+      exitBtn.click();
+    } else {
+      window.templeAudio?.resumeBirdChirp();
+      app.checkInteractables();
+    }
+  };
+
+  if (banyaSleepBtn) {
+    banyaSleepBtn.addEventListener('click', enterBanyaSleepMode);
+  }
+  if (banyaWakeBtn) {
+    banyaWakeBtn.addEventListener('click', wakeFromBanyaSleep);
+  }
+
+  // 이전에 반야용선에 마음을 두고 수면 모드로 나갔다가 다시 돌아온 경우 자동 안내
+  try {
+    if (localStorage.getItem('bomunsa_banya_resting') === '1') {
+      const banyaLoc = app.interactables.find(i => i.id === 'banya');
+      if (banyaLoc) {
+        app.activeLocation = banyaLoc;
+        app.currentMode = 'inside_banya';
+        app.setupDarkTempleInterior();
+        if (banyaMessageCard) banyaMessageCard.style.display = 'block';
+        if (banyaSleepBtn) banyaSleepBtn.style.display = 'flex';
+        if (meditationMenuToggle) meditationMenuToggle.style.display = 'none';
+        templeHeaderGroup.style.display = 'block';
+        meditationTitle.textContent = '반야용선 · 피안의 세계';
+        exitBtn.textContent = '도량으로 나가기';
+        meditationOverlay.classList.add('active');
+        enterBanyaSleepMode();
+      }
+    }
+  } catch (e) {}
 
   // [요청 반영] 도량에 들어서면(첫 화면 터치/클릭 시) 장엄한 대형 범종 소리가 도량에 울려 퍼짐
   const firstTouchHandler = (e) => {

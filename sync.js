@@ -338,6 +338,43 @@ class TempleSync {
   }
 
   // ==============================
+  // 반야용선 실제 탑승 불자 조회 / 탑승·하선 기록 (1회성 조회로 부하 없음)
+  // ==============================
+  async fetchBanyaOtherCount() {
+    if (!this.isConfigured || !this.supabase) {
+      return 0;
+    }
+    try {
+      const { data, error } = await this.supabase
+        .from('banya_passengers')
+        .select('owner_id')
+        .neq('owner_id', this.clientId)
+        .order('boarded_at', { ascending: false })
+        .limit(30);
+      if (!error && Array.isArray(data)) {
+        return data.length;
+      }
+    } catch (e) {}
+    return 0;
+  }
+
+  async setBanyaBoarding(isBoarding) {
+    if (!this.isConfigured || !this.supabase) return;
+    try {
+      if (isBoarding) {
+        await this.supabase
+          .from('banya_passengers')
+          .upsert({ owner_id: this.clientId, boarded_at: new Date().toISOString() }, { onConflict: 'owner_id' });
+      } else {
+        await this.supabase
+          .from('banya_passengers')
+          .delete()
+          .eq('owner_id', this.clientId);
+      }
+    } catch (e) {}
+  }
+
+  // ==============================
   // 공용 발원문/영가등 CRUD (서버 미설정 시 localStorage 폴백)
   // ==============================
   async fetchPrayers(locationId) {
