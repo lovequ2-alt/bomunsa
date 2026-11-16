@@ -2,299 +2,124 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0d0f12">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon.png">
-  <link rel="icon" type="image/png" href="icon.png">
-  <title>저 절로 — 도심속 천년고찰 3D 도량</title>
-  <meta name="description" content="도심속 천년고찰 비구니 사찰 — 산사 명상 및 참배 3D 가상 도량">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="3;url=https://jeojeollo.com/">
+  <title>저 절로 — 도량 주소 이전 안내</title>
+  <meta name="description" content="저 절로 도량이 새 주소(https://jeojeollo.com)로 이전했습니다.">
+  <link rel="canonical" href="https://jeojeollo.com/">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://lovequ2-alt.github.io/bomunsa/">
-  <meta property="og:title" content="저 절로 — 도심속 천년고찰 3D 도량">
-  <meta property="og:description" content="도심속 천년고찰 비구니 사찰 — 산사 명상 및 참배 3D 가상 도량">
-  <meta property="og:image" content="https://lovequ2-alt.github.io/bomunsa/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="저 절로 — 도심속 천년고찰 3D 도량">
-  <meta name="twitter:description" content="도심속 천년고찰 비구니 사찰 — 산사 명상 및 참배 3D 가상 도량">
-  <meta name="twitter:image" content="https://lovequ2-alt.github.io/bomunsa/og-image.png">
-  <link rel="stylesheet" href="style.css?v=20261114i">
-  <!-- Three.js (r128) - 로컬 파일 및 CDN 이중 안전 로드 -->
-  <script src="three.min.js"></script>
-  <script>
-    if (typeof THREE === 'undefined') {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+  <meta property="og:title" content="저 절로 — 도심속 쉼과 명상">
+  <meta property="og:description" content="저 절로 도량이 새 주소(https://jeojeollo.com)로 이전했습니다.">
+  <meta property="og:url" content="https://jeojeollo.com/">
+  <meta property="og:image" content="https://jeojeollo.com/og-image.png">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+      background: radial-gradient(circle at top, #27211a 0%, #161310 60%, #0f0d0b 100%);
+      color: #efe6d5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-  </script>
+    .wrap {
+      width: min(92vw, 480px);
+      padding: 40px 30px 34px;
+      border-radius: 20px;
+      background: rgba(34, 29, 24, 0.92);
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      text-align: center;
+    }
+    .lotus {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      font-size: 28px;
+      margin-bottom: 18px;
+    }
+    h1 {
+      margin: 0 0 14px;
+      font-size: 1.28rem;
+      line-height: 1.55;
+      font-weight: 700;
+      color: #f7eedc;
+      word-break: keep-all;
+    }
+    .new-url {
+      color: #e6c674;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(230, 198, 116, 0.45);
+    }
+    .desc {
+      margin: 0 0 26px;
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: #cbbda6;
+      word-break: keep-all;
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #c9a14a 0%, #a98130 100%);
+      color: #19140e;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .btn:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+    .count {
+      margin: 16px 0 0;
+      font-size: 0.85rem;
+      color: #9e907a;
+    }
+  </style>
 </head>
 <body>
-  <!-- [사용자 요청 반영: 초기 화면의 동그란 안의 로고가 기와 모양의 지붕 아래에 '절로 절로 저 절로'가 들어가도록 구성] -->
-  <div id="splash-overlay" class="splash-overlay">
-    <div class="splash-content">
-      <div class="splash-temple-art">
-        <svg viewBox="0 0 260 260" class="splash-lotus-svg" xmlns="http://www.w3.org/2000/svg">
-          <!-- 바깥 은은한 금빛 테두리 후광 (8엽 구름/연꽃 원형) -->
-          <path d="M 96 28 A 40 40 0 0 1 164 28 A 40 40 0 0 1 212 48 A 40 40 0 0 1 232 96 A 40 40 0 0 1 232 164 A 40 40 0 0 1 212 212 A 40 40 0 0 1 164 232 A 40 40 0 0 1 96 232 A 40 40 0 0 1 48 212 A 40 40 0 0 1 28 164 A 40 40 0 0 1 28 96 A 40 40 0 0 1 48 48 Z"
-                fill="#ffffff" stroke="rgba(218, 190, 125, 0.55)" stroke-width="11" stroke-linejoin="round"/>
-          <!-- 동그란 8엽 연꽃/구름 하얀 바탕과 진갈색 테두리 -->
-          <path d="M 96 28 A 40 40 0 0 1 164 28 A 40 40 0 0 1 212 48 A 40 40 0 0 1 232 96 A 40 40 0 0 1 232 164 A 40 40 0 0 1 212 212 A 40 40 0 0 1 164 232 A 40 40 0 0 1 96 232 A 40 40 0 0 1 48 212 A 40 40 0 0 1 28 164 A 40 40 0 0 1 28 96 A 40 40 0 0 1 48 48 Z"
-                fill="#ffffff" stroke="#26201b" stroke-width="6.5" stroke-linejoin="round"/>
-          <!-- 내부 기와 모양의 지붕과 전각 몸체 -->
-          <path d="M 95 72 Q 130 77 165 72 C 178 96 196 112 212 120 C 202 124 192 124 184 123 L 184 190 L 76 190 L 76 123 C 68 124 58 124 48 120 C 64 112 82 96 95 72 Z"
-                fill="#fbf5e3" stroke="#26201b" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>
-          <!-- 기와 모양 지붕 아래 금빛 구분선 -->
-          <line x1="83" y1="124" x2="177" y2="124" stroke="#c8a456" stroke-width="4" stroke-linecap="round"/>
-          <!-- 기와 모양의 지붕 아래 첫째 줄 '절로 절로', 다음 줄 '저 절로' 표시 -->
-          <text x="130" y="151" text-anchor="middle" fill="#1e1814" font-family="'Noto Serif KR', serif" font-size="18.5" font-weight="900" letter-spacing="0.5">절로 절로</text>
-          <text x="130" y="176" text-anchor="middle" fill="#1e1814" font-family="'Noto Serif KR', serif" font-size="21" font-weight="900" letter-spacing="1.2">저 절로</text>
-        </svg>
-      </div>
-      <div class="splash-lines">
-        <p>도심속</p>
-        <p>천년고찰</p>
-        <p>비구니 사찰입니다.</p>
-      </div>
-    </div>
-  </div>
+  <main class="wrap">
+    <div class="lotus" aria-hidden="true">🪷</div>
+    <h1>
+      저 절로 도량이 새 주소(<a class="new-url" href="https://jeojeollo.com/">https://jeojeollo.com</a>)로 이전했습니다.
+    </h1>
+    <p class="desc">
+      기존 방문 기록과 발원 공간이 새로운 도량으로 옮겨졌습니다.<br>
+      잠시 후 새 도량으로 자동 안내해 드립니다.
+    </p>
+    <a class="btn" href="https://jeojeollo.com/">지금 바로 이동하기</a>
+    <p class="count" id="countdown-text">3초 후 자동으로 이동합니다…</p>
+  </main>
 
-  <!-- 3D 캔버스 컨테이너 -->
-  <div id="canvas-container"></div>
-
-  <!-- 상단 헤더 ('저 절로' 앞에 흰 동그라미 로고 복원) -->
-  <header>
-    <div class="title-area">
-      <img src="icon.png" alt="저 절로 로고" class="header-logo">
-      <h1>저 절로 <span>도심속 쉼과 명상</span></h1>
-    </div>
-    <div class="header-actions">
-      <button id="credit-btn" class="icon-btn" title="음원 출처 및 저작권 안내">ⓘ</button>
-    </div>
-  </header>
-
-  <!-- 동시접속 인원 및 누적 방문자수 한 줄 표시 배지 -->
-  <div id="presence-badge" class="presence-badge">👥 누적 방문 1명 · 도량 1명</div>
-
-  <!-- 오른쪽 발원문 보기 버튼 (현재 전각의 다른 참배객 발원문 열람) -->
-  <button id="view-prayers-btn" class="view-prayers-fab" style="display: none;" type="button">
-    <svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>
-    <span>발원문 보기</span>
-  </button>
-
-  <!-- 순서 대기/알림 배너 -->
-  <div id="turn-toast" class="turn-toast" style="display: none;"></div>
-
-  <!-- 조작 힌트 배지 -->
-  <div id="control-hint" class="control-hint">
-    터치하거나 아래 이동장소를 누르면 이동합니다.
-  </div>
-
-  <!-- 전각 근접 팝업 카드 -->
-  <div id="location-card" class="location-card">
-    <div id="location-tag" class="location-card-tag" style="display: none;"></div>
-    <h2 id="location-title">대웅전</h2>
-    <p id="location-desc">대웅전에 대한 설명이 표시됩니다.</p>
-    <div class="location-card-actions">
-      <button id="enter-btn" class="enter-btn">
-        <span>🚪</span> 전각 안으로 입장하기
-      </button>
-      <button id="gwanyok-ladle-btn" class="gwanyok-ladle-btn" style="display: none;" type="button" title="바가지로 감로수 붓기">
-        <svg viewBox="0 0 36 36" class="ladle-svg" aria-hidden="true">
-          <!-- 표주박(바가지) 형상 -->
-          <path d="M6 17 C6 24 11 28 17.5 28 C23.5 28 27.5 24 27.5 17 Z" fill="#e8c374" stroke="#6a4512" stroke-width="1.8" stroke-linejoin="round"/>
-          <ellipse cx="16.75" cy="17" rx="10.75" ry="3.2" fill="#9bd8f5" stroke="#6a4512" stroke-width="1.6"/>
-          <path d="M26.5 16.5 L34 11.5" stroke="#7a4f16" stroke-width="3.2" stroke-linecap="round"/>
-        </svg>
-        <span id="gwanyok-ladle-badge" class="ladle-step-badge" style="display: none;"></span>
-      </button>
-    </div>
-    <div id="gwanyok-meditation-msg" class="gwanyok-meditation-msg" style="display: none;"></div>
-  </div>
-
-  <!-- 전각 내부 명상 모드 오버레이 -->
-  <div id="meditation-overlay" class="meditation-overlay">
-    <div class="meditation-header">
-      <div id="temple-header-group">
-        <h2 id="meditation-title">석굴암</h2>
-        <p id="meditation-sub" style="display: none;"></p>
-      </div>
-
-      <!-- [요청 반영] 탑돌이 발원 카드: 1/3 대신 깔끔한 2줄 (1줄: 몇 번째, 2줄: 발원 문구) -->
-      <div id="pagoda-counter-card" class="pagoda-counter-card">
-        <div id="pagoda-round-display" class="pagoda-round-display">첫 번째 바퀴</div>
-        <div id="pagoda-round-desc" class="pagoda-round-desc">지난 모든 번뇌와 허물을 비워냅니다.</div>
-      </div>
-
-      <!-- 내가 올린 발원문 표시 배지 -->
-      <div id="active-prayer-badge" class="active-prayer-badge"></div>
-    </div>
-
-    <!-- [호흡 가이드 원: 부처님 주변을 감싸고, 안내 문구는 부처님과 촛대 사이에 표시] -->
-    <div id="breath-circle-container" class="breath-circle-container" style="display: none;">
-      <div id="breath-circle" class="breath-circle active"></div>
-      <div id="breath-text-card" class="breath-text-card">
-        <span id="breath-text" class="breath-text">숨을 들이마십니다...</span>
-      </div>
-    </div>
-
-    <!-- [삼배 안내 카드] 부처님과 촛불 사이에 위치 (1/3 표기 제거) -->
-    <div id="bow-status-card" class="bow-status-card" style="display: none;">
-      <span id="bow-status-text">첫 번째 절: 지난 모든 허물과 번뇌를 비워냅니다.</span>
-    </div>
-
-    <!-- [전각별 경전 독송 자막 카드] -->
-    <div id="chant-status-card" class="chant-status-card" style="display: none;">
-      <span id="chant-status-text">천수경 독송 중...</span>
-    </div>
-
-    <!-- [반야용선 피안의 세계 안내 카드] -->
-    <div id="banya-message-card" class="banya-message-card" style="display: none;">
-      <p id="banya-message-text">번잡한 마음의 파도 속에서도,<br>반야용선에 오른 우리는 안전합니다.</p>
-    </div>
-
-    <!-- [사용자 요청 반영: 평소에는 '참배 · 수행하기'와 '마당으로' 2개만 단정히 두고, 누르면 차분한 수행 메뉴가 펼쳐짐] -->
-    <div id="meditation-menu-box" class="meditation-menu-box">
-      <div id="meditation-drawer" class="meditation-drawer">
-        <button id="chant-btn" class="control-grid-btn chant-btn" style="display: none;">
-          <span id="chant-text">경전 듣기</span>
-        </button>
-        <div class="action-grid">
-          <button id="bow-btn" class="control-grid-btn bow-highlight">
-            <span id="bow-text">삼배 올리기</span>
-          </button>
-          <button id="start-meditation-btn" class="control-grid-btn highlight">
-            <span id="meditation-btn-text">호흡 명상</span>
-          </button>
-          <button id="candle-btn" class="control-grid-btn">
-            <span id="candle-text">초 켜기</span>
-          </button>
-          <button id="incense-btn" class="control-grid-btn">
-            <span id="incense-text">향 피우기</span>
-          </button>
-        </div>
-
-        <div class="menu-bottom-row">
-          <button id="instrument-btn" class="control-grid-btn">
-            <span id="instrument-text">싱잉볼 치기</span>
-          </button>
-          <button id="open-prayer-btn" class="control-grid-btn prayer-wide-btn">
-            <svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg>
-            <span id="open-prayer-text">마음 발원문</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="meditation-footer-bar">
-        <button id="meditation-menu-toggle" class="control-grid-btn menu-toggle-btn" type="button">
-          <span id="meditation-menu-toggle-text">🙏 참배 · 수행하기</span>
-        </button>
-        <button id="banya-sleep-btn" class="control-grid-btn banya-sleep-btn" style="display: none;" type="button">
-          <span>🌅 마음은 내려놓고 현실로</span>
-        </button>
-        <button id="exit-btn" class="exit-btn">
-          마당으로
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 발원문 작성 팝업 모달 -->
-  <div id="prayer-modal-overlay" class="prayer-modal-overlay">
-    <div class="prayer-modal">
-      <h3 id="prayer-modal-title"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#b38f40" stroke-width="1.1" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 발원문(發願文)</h3>
-      <p id="prayer-modal-desc">도량에 머무는 지금, 간절한 소원이나 내려놓고 싶은 마음을 진솔하게 적어보세요.</p>
-      <textarea id="prayer-input" class="prayer-textarea" placeholder="예: 가족의 건강과 평온을 발원하며, 마음에 깃든 불안을 모두 비워냅니다..."></textarea>
-      <div class="prayer-modal-actions">
-        <button id="prayer-submit-btn" class="prayer-submit-btn"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 정성으로 발원 올리기</button>
-        <button id="prayer-cancel-btn" class="prayer-cancel-btn">닫기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 해당 전각 발원문 목록 모달 (다른 참배객 발원문 열람) -->
-  <div id="prayers-list-modal-overlay" class="prayer-modal-overlay">
-    <div class="prayer-modal prayers-list-modal">
-      <h3 id="prayers-list-modal-title"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#b38f40" stroke-width="1.1" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 도량 발원문</h3>
-      <p id="prayers-list-modal-desc" class="prayers-list-desc">이 전각에 참배객들이 정성껏 올린 발원문입니다.</p>
-      <div id="prayers-list-body" class="prayers-list-body"></div>
-      <div class="prayer-modal-actions">
-        <button id="prayers-list-close-btn" class="prayer-cancel-btn">닫기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 음원 출처 및 저작권 안내 모달 -->
-  <div id="credit-modal-overlay" class="prayer-modal-overlay">
-    <div class="prayer-modal credit-modal">
-      <h3>음원 출처 안내</h3>
-      <div class="credit-list">
-        <div class="credit-item">
-          <strong>목탁 소리 (목탁3)</strong>
-          <p>김용배 · <a href="https://gongu.copyright.or.kr/gongu/wrt/wrt/view.do?menuNo=200020&wrtSn=13253417" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (<a href="https://creativecommons.org/licenses/by/4.0/deed.ko" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>)</p>
-        </div>
-        <div class="credit-item">
-          <strong>요령·기타 사찰 음원</strong>
-          <p><a href="https://gongu.copyright.or.kr/" target="_blank" rel="noopener noreferrer">한국저작권위원회 공유마당</a> (CC BY 4.0)</p>
-        </div>
-        <div class="credit-item">
-          <strong>천수경 · 관음경 · 지장보살 정근 · 산왕대신 정근</strong>
-          <p>사찰 스님 허락 · 공개 독송·정근 음원</p>
-        </div>
-      </div>
-      <div class="prayer-modal-actions">
-        <button id="credit-close-btn" class="prayer-cancel-btn">닫기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 범종 타종 시 하단 '제자리로' 메뉴 -->
-  <button id="bell-return-btn" class="bell-return-btn" style="display: none;">제자리로</button>
-
-  <!-- 다른 참배객 근접 시 합장 인사 버튼 -->
-  <button id="greet-btn" class="greet-fab" style="display: none;" type="button">🙏 합장 인사</button>
-
-  <!-- 오른쪽 하단 스피커 버튼 및 1회성 소리 안내 설명 버튼 -->
-  <button id="sound-guide-tip" class="sound-guide-tip" type="button">소리듣기를 원하시면 오른쪽 하단의 스피커 표시를 누르세요.</button>
-  <button id="mute-btn" class="speaker-fab" title="소리 켜기/끄기" type="button">🔊</button>
-
-  <!-- 하단 랜드마크 내비게이션 바 (요청 순서: 입구, 관욕식, 대웅전, 탑전, 석굴암, 산령각, 범종, 지장전, 불사중 건물) -->
-  <nav id="bottom-nav" class="bottom-nav-container">
-    <button class="nav-pill active" data-id="hojimun">🚪 입장</button>
-    <button class="nav-pill" data-id="gwanyok">💧 관욕식</button>
-    <button class="nav-pill" data-id="daewoong">🏛️ 대웅전</button>
-    <button class="nav-pill" data-id="pagoda">🗼 탑전</button>
-    <button class="nav-pill" data-id="seokguram"><svg class="gray-cave-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#9aa0a8" stroke="#5a6068" stroke-width="1.4" stroke-linejoin="round" d="M2 20 C2 10 6.5 4 12 4 C17.5 4 22 10 22 20 Z"/><path fill="#32363d" d="M6.5 20 C6.5 13 9 9.5 12 9.5 C15 9.5 17.5 13 17.5 20 Z"/></svg> 석굴암</button>
-    <button class="nav-pill" data-id="sansin">🌲 산령각</button>
-    <button class="nav-pill" data-id="beomjong">🔔 범종</button>
-    <button class="nav-pill" data-id="jijang"><svg class="white-lotus-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" stroke="#c8a858" stroke-width="0.9" stroke-linejoin="round" d="M12 2.5C10.2 6.2 9.4 9.6 12 14.5C14.6 9.6 13.8 6.2 12 2.5Z M12 14.5C8.5 11.2 5.4 9.2 3.2 11.2C4.2 14.4 7.5 16.5 12 16.5Z M12 14.5C15.5 11.2 18.6 9.2 20.8 11.2C19.8 14.4 16.5 16.5 12 16.5Z M12 16.5C7.2 16.5 3.6 15.2 1.8 16.8C4.4 19.6 8.2 20.2 12 20.2C15.8 20.2 19.6 19.6 22.2 16.8C20.4 15.2 16.8 16.5 12 16.5Z"/></svg> 지장전</button>
-    <button class="nav-pill" data-id="banya">⛵ 반야용선</button>
-    <button class="nav-pill" data-id="bulsa">🪵 불사중 건물</button>
-  </nav>
-
-  <!-- 반야용선 현실 복귀(수면 모드) 오버레이 -->
-  <div id="banya-sleep-overlay" class="banya-sleep-overlay" style="display: none;">
-    <div class="banya-sleep-box">
-      <div class="banya-sleep-icon">🌅</div>
-      <h2>피안의 세계 · 반야용선</h2>
-      <p>번뇌를 내려놓은 나는<br>고요한 부처입니다.<br>평온한 마음으로 일상을 이어갑니다.</p>
-      <button id="banya-wake-btn" class="banya-wake-btn" type="button">⛵ 다시 반야용선으로</button>
-    </div>
-  </div>
-
-  <!-- 스크립트 연결 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="sync.js?v=20261114i"></script>
-  <script src="audio.js"></script>
-  <script src="banya_asset.js"></script>
-  <script src="daewoong_asset.js"></script>
-  <script src="jijang_asset.js"></script>
-  <script src="sansin_asset.js"></script>
-  <script src="seokguram_asset.js"></script>
-  <script src="temple3d.js?v=20261114i"></script>
-  <script src="main.js?v=20261114i"></script>
+  <script>
+    (function () {
+      var target = 'https://jeojeollo.com/';
+      var sec = 3;
+      var el = document.getElementById('countdown-text');
+      var timer = setInterval(function () {
+        sec -= 1;
+        if (sec > 0 && el) {
+          el.textContent = sec + '초 후 자동으로 이동합니다…';
+        } else {
+          clearInterval(timer);
+        }
+      }, 1000);
+      setTimeout(function () {
+        window.location.replace(target);
+      }, 3000);
+    })();
+  </script>
 </body>
 </html>
