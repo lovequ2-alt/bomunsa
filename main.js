@@ -841,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (chantStatusCard) chantStatusCard.style.display = 'none';
       if (banyaMessageCard) banyaMessageCard.style.display = 'block';
       if (banyaMessageText) {
-        banyaMessageText.innerHTML = '모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.';
+        banyaMessageText.innerHTML = '번잡한 마음의 파도 속에서도,<br>반야용선에 오른 우리는 안전합니다.';
       }
       if (app.updateBanyaPassengers) app.updateBanyaPassengers(0);
       if (window.templeSync && typeof window.templeSync.fetchBanyaOtherCount === 'function') {
@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (app.currentMode === 'inside_banya' && app.updateBanyaPassengers) {
             app.updateBanyaPassengers(otherCount);
             if (banyaMessageText && otherCount > 0) {
-              banyaMessageText.innerHTML = `모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
+              banyaMessageText.innerHTML = `번잡한 마음의 파도 속에서도,<br>반야용선에 오른 우리는 안전합니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
             }
           }
         });
@@ -868,11 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
       incenseBtn.style.display = 'none';
       if (chantBtn) chantBtn.style.display = 'none';
       if (chantStatusCard) chantStatusCard.style.display = 'none';
-
-      // [요청 반영] 묘보탑 이동 시 3배 대신 '탑돌이' 표출 (시작 시 합장 반배 진행, 🙏 및 🪵 제거하여 타 전각과 통일)
-      bowBtn.style.gridColumn = '1 / -1';
-      bowBtn.classList.add('active');
-      bowText.textContent = '합장 반배 중...';
+      bowBtn.style.display = 'none';
 
       instrumentText.textContent = '목탁 울리기';
       instrumentBtn.onclick = () => {
@@ -896,6 +892,7 @@ document.addEventListener('DOMContentLoaded', () => {
       templeHeaderGroup.style.display = 'block';
       pagodaCounterCard.classList.remove('visible');
       breathContainer.style.display = 'flex';
+      bowBtn.style.display = 'flex';
       startMeditationBtn.style.display = 'flex';
       candleBtn.style.display = 'flex';
       incenseBtn.style.display = 'flex';
@@ -1151,6 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { localStorage.removeItem('bomunsa_banya_resting'); } catch (e) {}
     window.templeSync?.setBanyaBoarding(false);
     bowStatusCard.style.display = 'none';
+    bowBtn.style.display = 'flex';
     bowBtn.classList.remove('active');
     bowBtn.style.gridColumn = '';
     bowText.textContent = '삼배 올리기';
@@ -1326,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         app.setupDarkTempleInterior();
         if (banyaMessageCard) banyaMessageCard.style.display = 'block';
         if (banyaMessageText) {
-          banyaMessageText.innerHTML = '모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.';
+          banyaMessageText.innerHTML = '번잡한 마음의 파도 속에서도,<br>반야용선에 오른 우리는 안전합니다.';
         }
         if (app.updateBanyaPassengers) app.updateBanyaPassengers(0);
         if (window.templeSync && typeof window.templeSync.fetchBanyaOtherCount === 'function') {
@@ -1334,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (app.currentMode === 'inside_banya' && app.updateBanyaPassengers) {
               app.updateBanyaPassengers(otherCount);
               if (banyaMessageText && otherCount > 0) {
-                banyaMessageText.innerHTML = `모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
+                banyaMessageText.innerHTML = `번잡한 마음의 파도 속에서도,<br>반야용선에 오른 우리는 안전합니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
               }
             }
           });
