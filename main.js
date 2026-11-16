@@ -841,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (chantStatusCard) chantStatusCard.style.display = 'none';
       if (banyaMessageCard) banyaMessageCard.style.display = 'block';
       if (banyaMessageText) {
-        banyaMessageText.innerHTML = '모든 번잡함을 반야용선에 실어 보내고 고요한 부처로 돌아갑니다.';
+        banyaMessageText.innerHTML = '모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.';
       }
       if (app.updateBanyaPassengers) app.updateBanyaPassengers(0);
       if (window.templeSync && typeof window.templeSync.fetchBanyaOtherCount === 'function') {
@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (app.currentMode === 'inside_banya' && app.updateBanyaPassengers) {
             app.updateBanyaPassengers(otherCount);
             if (banyaMessageText && otherCount > 0) {
-              banyaMessageText.innerHTML = `모든 번잡함을 반야용선에 실어 보내고 고요한 부처로 돌아갑니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
+              banyaMessageText.innerHTML = `모든 번잡한 마음의 파도속에서 반야용선에 탄 우리는 안전합니다.<br><span style="font-size:0.82rem;color:#f5d896;">(함께 마음을 내려놓은 불자 ${otherCount}명)</span>`;
             }
           }
         });
@@ -1299,15 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (app.setSleepMode) app.setSleepMode(false);
     window.templeAudio?.exitSleepMode();
 
-    const banyaLoc = app.interactables.find(i => i.id === 'banya');
-    if (banyaLoc) {
-      app.playerPos.copy(banyaLoc.position);
-      app.characterGroup.position.copy(app.playerPos);
-      app.activeLocation = banyaLoc;
-    }
-    if (app.currentMode === 'inside_banya') {
-      exitBtn.click();
-    } else {
+    if (app.currentMode !== 'inside_banya') {
       window.templeAudio?.resumeBirdChirp();
       app.checkInteractables();
     }
